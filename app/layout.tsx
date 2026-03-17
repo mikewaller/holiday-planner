@@ -16,8 +16,8 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Holiday Planner",
-  description: "Find the perfect holiday dates for your group",
+  title: "Hatch a Plan",
+  description: "Hatch the perfect trip together — find dates that work for everyone",
 };
 
 export default function RootLayout({

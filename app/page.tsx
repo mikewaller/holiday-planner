@@ -74,24 +74,18 @@ export default function Home() {
 
         {/* Hero text */}
         <div className="fade-up fade-up-1 text-center mb-8">
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5"
-            style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.2)' }}
-          >
-            <span style={{ fontSize: '0.75rem' }}>✈️</span>
-            <span className="label-tag" style={{ color: 'var(--color-coral)', letterSpacing: '0.06em' }}>
-              Holiday Planner
-            </span>
+          {/* Egg illustration */}
+          <div className="flex justify-center mb-4">
+            <img src="/hero-egg.svg" alt="" aria-hidden="true" style={{ width: '220px', height: 'auto' }} />
           </div>
           <h1
             className="font-display"
             style={{ fontSize: '3rem', lineHeight: 1.1, fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}
           >
-            Let&apos;s find when<br />
-            <span style={{ color: 'var(--color-coral)' }}>everyone</span> can go
+            Time to <span style={{ color: 'var(--color-coral)' }}>hatch</span><br />a plan
           </h1>
           <p className="mt-3 text-base" style={{ color: 'var(--color-muted)', fontWeight: 400 }}>
-            Share a link. No accounts. No fuss.
+            Find dates that work for everyone. Share a link. No fuss.
           </p>
         </div>
 
@@ -170,7 +164,7 @@ export default function Home() {
         {/* Footer note */}
         <div className="fade-up fade-up-3 mt-6 text-center">
           <p className="text-sm" style={{ color: 'var(--color-faint)' }}>
-            Your link works for everyone — no sign-up needed
+            Your link works for everyone — no sign-up needed 🥚
           </p>
         </div>
 

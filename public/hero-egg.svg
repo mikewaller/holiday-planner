@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 265" fill="none">
+
+  <!-- Ground shadow -->
+  <ellipse cx="160" cy="236" rx="76" ry="10" fill="rgba(44,31,20,0.07)"/>
+
+  <!-- EGG BOTTOM CUP -->
+  <path d="
+    M87,138 L96,130 L106,139 L117,130 L128,139 L139,130 L150,138 L160,133 L170,138 L181,130 L192,138 L203,130 L214,138 L224,130 L233,138
+    C248,165 248,210 160,232
+    C72,210 72,165 87,138 Z"
+    fill="#FFFAF3" stroke="#D9CCBE" stroke-width="1.5" stroke-linejoin="round"/>
+
+  <!-- Calendar inside egg -->
+  <g transform="translate(115, 152)">
+    <!-- Card shadow -->
+    <rect x="2" y="3" width="90" height="66" rx="7" fill="rgba(44,31,20,0.07)"/>
+    <!-- Card -->
+    <rect width="90" height="66" rx="7" fill="white" stroke="#EDE5DA" stroke-width="1.5"/>
+    <!-- Header bar -->
+    <rect width="90" height="21" rx="7" fill="#F4621F"/>
+    <rect y="15" width="90" height="6" fill="#F4621F"/>
+    <!-- Month label -->
+    <rect x="25" y="6" width="40" height="5" rx="2.5" fill="rgba(255,255,255,0.5)"/>
+    <!-- Grid row 1 -->
+    <rect x="6"  y="29" width="13" height="9" rx="2" fill="#FFF0E9"/>
+    <rect x="22" y="29" width="13" height="9" rx="2" fill="#FFF0E9"/>
+    <rect x="38" y="29" width="13" height="9" rx="2" fill="#F4621F" opacity="0.8"/>
+    <rect x="54" y="29" width="13" height="9" rx="2" fill="#FFF0E9"/>
+    <rect x="70" y="29" width="13" height="9" rx="2" fill="#FFF0E9"/>
+    <!-- Grid row 2 -->
+    <rect x="6"  y="42" width="13" height="9" rx="2" fill="#FFF0E9"/>
+    <rect x="22" y="42" width="13" height="9" rx="2" fill="#F4621F" opacity="0.5"/>
+    <rect x="38" y="42" width="13" height="9" rx="2" fill="#FFF0E9"/>
+    <rect x="54" y="42" width="13" height="9" rx="2" fill="#FFF0E9"/>
+    <rect x="70" y="42" width="13" height="9" rx="2" fill="#F4621F" opacity="0.5"/>
+    <!-- Grid row 3 -->
+    <rect x="6"  y="55" width="13" height="9" rx="2" fill="#FFF0E9"/>
+    <rect x="22" y="55" width="13" height="9" rx="2" fill="#FFF0E9"/>
+    <rect x="38" y="55" width="13" height="9" rx="2" fill="#FFF0E9"/>
+    <rect x="54" y="55" width="13" height="9" rx="2" fill="#F4621F" opacity="0.6"/>
+    <rect x="70" y="55" width="13" height="9" rx="2" fill="#FFF0E9"/>
+  </g>
+
+  <!-- LEFT shell fragment (rotated outward) -->
+  <g transform="rotate(-20, 87, 138)">
+    <path d="
+      M87,138 L96,130 L106,139 L117,130 L128,139 L139,130 L150,138 L160,133
+      C158,115 156,90 145,73
+      C130,54 112,48 100,52
+      C86,58 78,78 80,102
+      C81,118 83,130 87,138 Z"
+      fill="#FFFAF3" stroke="#D9CCBE" stroke-width="1.5" stroke-linejoin="round"/>
+    <!-- Inner shell curve (subtle shading) -->
+    <path d="M95,136 C90,118 88,95 97,77 C106,61 120,56 130,57"
+          stroke="#EDE5DA" stroke-width="2" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- RIGHT shell fragment (rotated outward) -->
+  <g transform="rotate(20, 233, 138)">
+    <path d="
+      M233,138 L224,130 L214,139 L203,130 L192,139 L181,130 L170,138 L160,133
+      C162,115 164,90 175,73
+      C190,54 208,48 220,52
+      C234,58 242,78 240,102
+      C239,118 237,130 233,138 Z"
+      fill="#FFFAF3" stroke="#D9CCBE" stroke-width="1.5" stroke-linejoin="round"/>
+    <!-- Inner shell curve (subtle shading) -->
+    <path d="M225,136 C230,118 232,95 223,77 C214,61 200,56 190,57"
+          stroke="#EDE5DA" stroke-width="2" stroke-linecap="round" fill="none"/>
+  </g>
+
+  <!-- Dotted flight trail -->
+  <path d="M184,124 Q242,72 294,28"
+        stroke="#F4621F" stroke-width="2.5"
+        stroke-dasharray="5 7"
+        stroke-linecap="round"
+        fill="none"/>
+
+  <!-- Paper plane -->
+  <g transform="translate(294, 12) rotate(-35)">
+    <path d="M2 22L27 11L2 0V8L22 11L2 14V22Z" fill="#F4621F"/>
+  </g>
+
+</svg>

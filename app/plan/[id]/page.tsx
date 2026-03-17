@@ -183,7 +183,7 @@ export default function PlanPage() {
                   style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.18)', textDecoration: 'none' }}
                 >
                   <span style={{ fontSize: '0.7rem' }}>✈️</span>
-                  <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>Holiday Planner</span>
+                  <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>Hatch a Plan</span>
                 </a>
                 <a href="/my-trips"
                   className="inline-flex items-center px-2.5 py-1 rounded-full label-tag"

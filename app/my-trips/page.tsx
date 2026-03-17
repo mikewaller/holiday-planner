@@ -52,7 +52,7 @@ export default function MyTripsPage() {
             <a href="/" className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-4"
               style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.18)' }}>
               <span style={{ fontSize: '0.7rem' }}>✈️</span>
-              <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>Holiday Planner</span>
+              <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>Hatch a Plan</span>
             </a>
             <h1 className="font-display font-bold" style={{ fontSize: '2.2rem', lineHeight: 1.1, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}>
               My trips

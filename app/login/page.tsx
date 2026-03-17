@@ -136,7 +136,7 @@ export default function LoginPage() {
           <a href="/" className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5"
             style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.2)' }}>
             <span style={{ fontSize: '0.75rem' }}>✈️</span>
-            <span className="label-tag" style={{ color: 'var(--color-coral)', letterSpacing: '0.06em' }}>Holiday Planner</span>
+            <span className="label-tag" style={{ color: 'var(--color-coral)', letterSpacing: '0.06em' }}>Hatch a Plan</span>
           </a>
           <h1 className="font-display" style={{ fontSize: '2.5rem', lineHeight: 1.1, fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}>
             Save your trips
