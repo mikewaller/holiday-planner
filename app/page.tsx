@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 export default function Home() {
   const router = useRouter();
+  const [authed, setAuthed] = useState<boolean | null>(null);
   const [name, setName] = useState('');
   const [windowStart, setWindowStart] = useState('');
   const [windowEnd, setWindowEnd] = useState('');
@@ -12,6 +14,11 @@ export default function Home() {
   const [maxDuration, setMaxDuration] = useState(7);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => setAuthed(!!user));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,6 +46,30 @@ export default function Home() {
 
   return (
     <main className="dot-bg min-h-screen flex items-center justify-center p-4 py-12">
+      {/* Nav */}
+      {authed !== null && (
+        <div className="fixed top-4 right-4 z-50">
+          {authed ? (
+            <a href="/my-trips"
+              className="label-tag px-4 py-2.5 rounded-xl transition-all duration-150 inline-flex items-center gap-1.5"
+              style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', textDecoration: 'none', boxShadow: '0 2px 8px rgba(44,31,20,0.08)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--color-border-mid)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--color-border)'; }}
+            >
+              My trips →
+            </a>
+          ) : (
+            <a href="/login"
+              className="label-tag px-4 py-2.5 rounded-xl transition-all duration-150 inline-flex items-center gap-1.5"
+              style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', textDecoration: 'none', boxShadow: '0 2px 8px rgba(44,31,20,0.08)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--color-border-mid)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--color-border)'; }}
+            >
+              Sign in
+            </a>
+          )}
+        </div>
+      )}
       <div className="w-full max-w-md">
 
         {/* Hero text */}

@@ -10,8 +10,12 @@ CREATE TABLE IF NOT EXISTS plans (
   max_duration INTEGER NOT NULL,
   creator_token TEXT NOT NULL,
   is_locked INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL
 );
+
+-- Run this if you already have the plans table and need to add the user_id column:
+-- ALTER TABLE plans ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS participants (
   id TEXT PRIMARY KEY,

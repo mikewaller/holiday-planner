@@ -32,6 +32,7 @@ export default function PlanPage() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [availability, setAvailability] = useState<Availability[]>([]);
+  const [resolvedCreatorToken, setResolvedCreatorToken] = useState<string | null>(creatorToken);
   const [me, setMe] = useState<{ id: string; name: string; token: string } | null>(null);
   const [nameInput, setNameInput] = useState('');
   const [nameError, setNameError] = useState('');
@@ -47,6 +48,8 @@ export default function PlanPage() {
     if (!res.ok) return;
     const data = await res.json();
     setPlan(data.plan); setParticipants(data.participants); setAvailability(data.availability);
+    // If API returns creator_token (logged-in owner), use it
+    if (data.creator_token) setResolvedCreatorToken(data.creator_token);
   }, [planId]);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
@@ -90,16 +93,16 @@ export default function PlanPage() {
   }
 
   async function toggleLock() {
-    if (!creatorToken || !plan) return;
+    if (!resolvedCreatorToken || !plan) return;
     setActionLoading(true);
-    await fetch(`/api/plans/${planId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ creator_token: creatorToken, is_locked: !plan.is_locked }) });
+    await fetch(`/api/plans/${planId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ creator_token: resolvedCreatorToken, is_locked: !plan.is_locked }) });
     await fetchPlan(); setActionLoading(false);
   }
 
   async function deletePlan() {
-    if (!creatorToken || !confirm('Delete this plan? This cannot be undone.')) return;
+    if (!resolvedCreatorToken || !confirm('Delete this plan? This cannot be undone.')) return;
     setActionLoading(true);
-    await fetch(`/api/plans/${planId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ creator_token: creatorToken }) });
+    await fetch(`/api/plans/${planId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ creator_token: resolvedCreatorToken }) });
     window.location.href = '/';
   }
 
@@ -197,7 +200,7 @@ export default function PlanPage() {
               </div>
             </div>
             <div className="flex gap-2 flex-wrap mt-1">
-              {creatorToken && <>
+              {resolvedCreatorToken && <>
                 <button onClick={toggleLock} disabled={actionLoading} className="label-tag px-3 py-2 rounded-xl transition-all duration-150 disabled:opacity-40" style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)' }}>
                   {plan.is_locked ? 'Unlock' : 'Lock'}
                 </button>
