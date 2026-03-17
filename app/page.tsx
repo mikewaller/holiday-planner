@@ -45,7 +45,10 @@ export default function Home() {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <main className="dot-bg min-h-screen flex items-center justify-center p-4 py-12">
+    <main className="relative min-h-screen flex items-center justify-center p-4 py-12 overflow-hidden" style={{ background: 'var(--color-bg)' }}>
+      {/* Background egg art */}
+      <img src="/bg-egg.svg" alt="" aria-hidden="true"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', userSelect: 'none' }} />
       {/* Nav */}
       {authed !== null && (
         <div className="fixed top-4 right-4 z-50">
@@ -70,14 +73,10 @@ export default function Home() {
           )}
         </div>
       )}
-      <div className="w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md">
 
         {/* Hero text */}
         <div className="fade-up fade-up-1 text-center mb-8">
-          {/* Egg illustration */}
-          <div className="flex justify-center mb-4">
-            <img src="/hero-egg.svg" alt="" aria-hidden="true" style={{ width: '220px', height: 'auto' }} />
-          </div>
           <h1
             className="font-display"
             style={{ fontSize: '3rem', lineHeight: 1.1, fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}
