@@ -1,139 +1,110 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" fill="none">
   <defs>
-    <radialGradient id="eggGlow" cx="220" cy="480" r="460" gradientUnits="userSpaceOnUse">
-      <stop offset="0%"   stop-color="#F4621F" stop-opacity="0.14"/>
-      <stop offset="55%"  stop-color="#F4621F" stop-opacity="0.04"/>
+    <radialGradient id="calGlow" cx="260" cy="390" r="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#F4621F" stop-opacity="0.11"/>
+      <stop offset="60%"  stop-color="#F4621F" stop-opacity="0.03"/>
       <stop offset="100%" stop-color="#F4621F" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
-  <!-- Warm radial glow behind egg -->
-  <ellipse cx="220" cy="480" rx="480" ry="440" fill="url(#eggGlow)"/>
+  <!-- Soft warm glow behind calendar -->
+  <ellipse cx="260" cy="390" rx="440" ry="400" fill="url(#calGlow)"/>
 
-  <!-- Full egg ghost silhouette -->
-  <ellipse cx="222" cy="480" rx="196" ry="296"
-    fill="rgba(255,250,243,0.10)" stroke="#C4B5A5" stroke-width="1.5" opacity="0.30"/>
-
-  <!-- ── Egg bottom cup (intact lower shell) ─────── -->
-  <g opacity="0.52">
-    <path d="
-      M58,352 L84,334 L110,356 L138,332 L164,356 L192,332 L216,352
-      L230,342 L244,352 L270,332 L296,356 L322,332 L348,356 L374,332 L400,352
-      C432,442 432,600 222,778
-      C12,600 12,442 58,352 Z"
-      fill="rgba(255,250,243,0.32)" stroke="#C4B5A5" stroke-width="1.5" stroke-linejoin="round"/>
-  </g>
-
-  <!-- ── Calendar inside egg ─────────────────────── -->
-  <g opacity="0.28" transform="translate(98, 372)">
+  <!-- ── Calendar (background, low opacity) ──────── -->
+  <g opacity="0.28" transform="translate(30, 160)">
     <!-- Card shadow -->
-    <rect x="3" y="4" width="248" height="210" rx="9" fill="rgba(44,31,20,0.07)"/>
-    <!-- Card -->
-    <rect width="248" height="210" rx="9" fill="rgba(255,255,255,0.88)" stroke="#D9CCBE" stroke-width="1"/>
+    <rect x="4" y="5" width="460" height="435" rx="12" fill="rgba(44,31,20,0.07)"/>
+    <!-- Card bg -->
+    <rect width="460" height="435" rx="12" fill="rgba(255,255,255,0.86)" stroke="#D9CCBE" stroke-width="1.5"/>
     <!-- Header bar -->
-    <rect width="248" height="46" rx="9" fill="#F4621F" opacity="0.72"/>
-    <rect y="38" width="248" height="8" fill="#F4621F" opacity="0.72"/>
+    <rect width="460" height="50" rx="12" fill="#F4621F" opacity="0.70"/>
+    <rect y="40" width="460" height="10" fill="#F4621F" opacity="0.70"/>
     <!-- Month label -->
-    <rect x="74" y="15" width="100" height="8" rx="4" fill="rgba(255,255,255,0.45)"/>
-    <!-- Row 1 -->
-    <rect x="14"  y="56" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="48"  y="56" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="82"  y="56" width="28" height="24" rx="4" fill="#F4621F" opacity="0.55"/>
-    <rect x="116" y="56" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="150" y="56" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="184" y="56" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="218" y="56" width="24" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <!-- Row 2 -->
-    <rect x="14"  y="86" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="48"  y="86" width="28" height="24" rx="4" fill="#F4621F" opacity="0.40"/>
-    <rect x="82"  y="86" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="116" y="86" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="150" y="86" width="28" height="24" rx="4" fill="#F4621F" opacity="0.48"/>
-    <rect x="184" y="86" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="218" y="86" width="24" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <!-- Row 3 -->
-    <rect x="14"  y="116" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="48"  y="116" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="82"  y="116" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="116" y="116" width="28" height="24" rx="4" fill="#F4621F" opacity="0.52"/>
-    <rect x="150" y="116" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="184" y="116" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="218" y="116" width="24" height="24" rx="4" fill="#F4621F" opacity="0.40"/>
-    <!-- Row 4 -->
-    <rect x="14"  y="146" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="48"  y="146" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="82"  y="146" width="28" height="24" rx="4" fill="#F4621F" opacity="0.44"/>
-    <rect x="116" y="146" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="150" y="146" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="184" y="146" width="28" height="24" rx="4" fill="#F4621F" opacity="0.38"/>
-    <rect x="218" y="146" width="24" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <!-- Row 5 -->
-    <rect x="14"  y="176" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="48"  y="176" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="82"  y="176" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="116" y="176" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="150" y="176" width="28" height="24" rx="4" fill="#F4621F" opacity="0.42"/>
-    <rect x="184" y="176" width="28" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
-    <rect x="218" y="176" width="24" height="24" rx="4" fill="rgba(244,98,31,0.11)"/>
+    <rect x="140" y="16" width="180" height="10" rx="5" fill="rgba(255,255,255,0.45)"/>
+    <!-- Day headers (placeholder bars for M T W T F S S) -->
+    <rect x="16"  y="58" width="56" height="6" rx="3" fill="rgba(196,181,165,0.55)"/>
+    <rect x="78"  y="58" width="56" height="6" rx="3" fill="rgba(196,181,165,0.55)"/>
+    <rect x="140" y="58" width="56" height="6" rx="3" fill="rgba(196,181,165,0.55)"/>
+    <rect x="202" y="58" width="56" height="6" rx="3" fill="rgba(196,181,165,0.55)"/>
+    <rect x="264" y="58" width="56" height="6" rx="3" fill="rgba(196,181,165,0.55)"/>
+    <rect x="326" y="58" width="56" height="6" rx="3" fill="rgba(244,98,31,0.38)"/>
+    <rect x="388" y="58" width="56" height="6" rx="3" fill="rgba(244,98,31,0.38)"/>
+
+    <!-- Row 1 y=72 -->
+    <rect x="16"  y="72" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="78"  y="72" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="140" y="72" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="202" y="72" width="56" height="52" rx="6" fill="#F4621F" opacity="0.46"/>
+    <rect x="264" y="72" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="326" y="72" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="388" y="72" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+
+    <!-- Row 2 y=130 (circled date cell omitted — drawn separately at higher opacity) -->
+    <rect x="16"  y="130" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="78"  y="130" width="56" height="52" rx="6" fill="#F4621F" opacity="0.40"/>
+    <rect x="140" y="130" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="202" y="130" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="264" y="130" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <!-- x=326 col 6 is the circled date — skipped here -->
+    <rect x="388" y="130" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+
+    <!-- Row 3 y=188 -->
+    <rect x="16"  y="188" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="78"  y="188" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="140" y="188" width="56" height="52" rx="6" fill="#F4621F" opacity="0.50"/>
+    <rect x="202" y="188" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="264" y="188" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="326" y="188" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="388" y="188" width="56" height="52" rx="6" fill="#F4621F" opacity="0.40"/>
+
+    <!-- Row 4 y=246 -->
+    <rect x="16"  y="246" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="78"  y="246" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="140" y="246" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="202" y="246" width="56" height="52" rx="6" fill="#F4621F" opacity="0.44"/>
+    <rect x="264" y="246" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="326" y="246" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="388" y="246" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+
+    <!-- Row 5 y=304 -->
+    <rect x="16"  y="304" width="56" height="52" rx="6" fill="#F4621F" opacity="0.38"/>
+    <rect x="78"  y="304" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="140" y="304" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="202" y="304" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="264" y="304" width="56" height="52" rx="6" fill="#F4621F" opacity="0.43"/>
+    <rect x="326" y="304" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="388" y="304" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+
+    <!-- Row 6 y=362 -->
+    <rect x="16"  y="362" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="78"  y="362" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="140" y="362" width="56" height="52" rx="6" fill="#F4621F" opacity="0.41"/>
+    <rect x="202" y="362" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="264" y="362" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="326" y="362" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
+    <rect x="388" y="362" width="56" height="52" rx="6" fill="rgba(244,98,31,0.09)"/>
   </g>
 
-  <!-- ── LEFT shell fragment (rotated outward) ───── -->
-  <g opacity="0.46" transform="rotate(-19, 58, 352)">
-    <path d="
-      M58,352 L84,334 L110,356 L138,332 L164,356 L192,332 L216,352 L230,342
-      C228,320 224,290 212,264
-      C198,234 178,218 158,212
-      C128,204 96,218 74,244
-      C52,270 44,312 58,352 Z"
-      fill="rgba(255,250,243,0.48)" stroke="#C4B5A5" stroke-width="1.5" stroke-linejoin="round"/>
-    <!-- Inner shell shading -->
-    <path d="M68,346 C62,324 60,294 72,268 C84,244 102,234 120,232"
-          stroke="#D9CCBE" stroke-width="2" stroke-linecap="round" opacity="0.55"/>
-  </g>
-
-  <!-- ── RIGHT shell fragment (rotated outward) ──── -->
-  <g opacity="0.46" transform="rotate(19, 400, 352)">
-    <path d="
-      M400,352 L374,332 L348,356 L322,332 L296,356 L270,332 L244,352 L230,342
-      C232,320 236,290 248,264
-      C262,234 282,218 302,212
-      C332,204 364,218 386,244
-      C408,270 416,312 400,352 Z"
-      fill="rgba(255,250,243,0.48)" stroke="#C4B5A5" stroke-width="1.5" stroke-linejoin="round"/>
-    <!-- Inner shell shading -->
-    <path d="M390,346 C396,324 398,294 386,268 C374,244 356,234 338,232"
-          stroke="#D9CCBE" stroke-width="2" stroke-linecap="round" opacity="0.55"/>
-  </g>
-
-  <!-- ── Crack lines on shell ────────────────────── -->
-  <g stroke="#C4B5A5" stroke-width="1.5" stroke-linecap="round" opacity="0.22">
-    <path d="M160,350 L144,288 L128,236"/>
-    <path d="M300,350 L316,288 L330,236"/>
-    <path d="M230,342 L226,258 L214,196"/>
-  </g>
-
-  <!-- ── Small fallen shell chips ───────────────── -->
-  <g opacity="0.28">
-    <path d="M104,710 L128,692 L146,708 L130,726 Z"
-          fill="rgba(255,250,243,0.7)" stroke="#C4B5A5" stroke-width="1"/>
-    <path d="M292,722 L312,704 L326,718 L310,736 Z"
-          fill="rgba(255,250,243,0.7)" stroke="#C4B5A5" stroke-width="1"/>
-    <path d="M36,554 L54,540 L66,554 L50,568 Z"
-          fill="rgba(255,250,243,0.7)" stroke="#C4B5A5" stroke-width="1"/>
-    <path d="M380,740 L396,726 L406,738 L392,752 Z"
-          fill="rgba(255,250,243,0.7)" stroke="#C4B5A5" stroke-width="1"/>
+  <!-- ── Circled departure date (higher opacity, drawn outside calendar group) -->
+  <!-- Cell local (326, 130) → world (356, 290). Cell size 56×52. Center (384, 316) -->
+  <g transform="translate(30, 160)" opacity="0.58">
+    <!-- Filled cell -->
+    <rect x="326" y="130" width="56" height="52" rx="6" fill="#F4621F" opacity="0.60"/>
+    <!-- Circle ring around it -->
+    <ellipse cx="354" cy="156" rx="36" ry="33"
+             stroke="#F4621F" stroke-width="2.5" fill="none"/>
   </g>
 
   <!-- ── Dotted flight trail ─────────────────────── -->
-  <!-- Curves from egg opening, passes behind the form card, arrives at plane -->
-  <path d="M408,342 C570,252 1060,572 1298,454"
+  <!-- Starts from right edge of circle: world (30+354+36, 160+156) = (420, 316) -->
+  <path d="M420,316 C590,235 1065,572 1318,452"
         stroke="#F4621F" stroke-width="2.5"
         stroke-dasharray="8 11"
         stroke-linecap="round"
-        fill="none" opacity="0.52"/>
+        fill="none" opacity="0.50"/>
 
   <!-- ── Paper plane ─────────────────────────────── -->
-  <g transform="translate(1298, 422) rotate(-22) scale(2.8)" opacity="0.78">
+  <g transform="translate(1318, 420) rotate(-22) scale(2.8)" opacity="0.76">
     <path d="M2 18L22 9L2 0V7L17 9L2 11V18Z" fill="#F4621F"/>
   </g>
 
