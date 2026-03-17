@@ -47,7 +47,7 @@ export default function Home() {
   return (
     <main className="relative min-h-screen flex items-center justify-center p-4 py-12 overflow-hidden" style={{ background: 'var(--color-bg)' }}>
       {/* Background egg art */}
-      <img src="/bg-egg.svg" alt="" aria-hidden="true"
+      <img src="/bg-egg.png" alt="" aria-hidden="true"
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none', userSelect: 'none' }} />
       {/* Nav */}
       {authed !== null && (
