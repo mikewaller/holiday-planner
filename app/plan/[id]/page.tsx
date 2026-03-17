@@ -431,7 +431,14 @@ export default function PlanPage() {
                 const nightsLabel = w.minNights === w.maxNights ? `${w.minNights} night${w.minNights !== 1 ? 's' : ''}` : `${w.minNights}–${w.maxNights} nights`;
                 const medals = ['🥇', '🥈', '🥉', '4th', '5th'];
                 return (
-                  <div key={i} className="flex items-center gap-3 px-5 py-4">
+                  <a
+                    key={i}
+                    href={`/plan/${planId}/book?start=${w.start}&nights=${w.maxNights}`}
+                    className="flex items-center gap-3 px-5 py-4 transition-all duration-150"
+                    style={{ textDecoration: 'none', display: 'flex' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--color-bg)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = ''; }}
+                  >
                     <div className="text-xl flex-shrink-0 w-8 text-center">
                       {i < 3 ? medals[i] : <span className="label-tag" style={{ color: 'var(--color-faint)' }}>#{i+1}</span>}
                     </div>
@@ -447,7 +454,8 @@ export default function PlanPage() {
                         {w.cantDoCount > 0 && <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-cantdo-bg)', color: 'var(--color-cantdo)', fontSize: '0.58rem' }}>{w.cantDoCount} can&apos;t do</span>}
                       </div>
                     </div>
-                  </div>
+                    <span style={{ color: 'var(--color-faint)', fontSize: '1.1rem' }}>›</span>
+                  </a>
                 );
               })}
             </div>
