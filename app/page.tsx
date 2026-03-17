@@ -16,33 +16,20 @@ export default function Home() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-
-    if (minDuration > maxDuration) {
-      setError('Minimum duration cannot exceed maximum duration.');
-      return;
-    }
-
+    if (minDuration > maxDuration) { setError('Minimum nights can\'t exceed maximum.'); return; }
     setLoading(true);
     try {
       const res = await fetch('/api/plans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          window_start: windowStart,
-          window_end: windowEnd,
-          min_duration: minDuration,
-          max_duration: maxDuration,
-        }),
+        body: JSON.stringify({ name, window_start: windowStart, window_end: windowEnd, min_duration: minDuration, max_duration: maxDuration }),
       });
-
-      if (!res.ok) throw new Error('Failed to create plan');
+      if (!res.ok) throw new Error();
       const { id, creator_token } = await res.json();
-
       localStorage.setItem(`creator_token_${id}`, creator_token);
       router.push(`/plan/${id}?creator=${creator_token}`);
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError('Something went wrong — please try again.');
     } finally {
       setLoading(false);
     }
@@ -51,133 +38,109 @@ export default function Home() {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <main
-      className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: 'radial-gradient(ellipse at 50% 0%, #1A1610 0%, #0D0C0A 65%)' }}
-    >
-      <div className="w-full max-w-sm">
+    <main className="dot-bg min-h-screen flex items-center justify-center p-4 py-12">
+      <div className="w-full max-w-md">
 
-        {/* Wordmark */}
-        <div className="fade-up fade-up-1 text-center mb-12">
-          <div className="inline-flex items-center gap-3 mb-8">
-            <span style={{ color: 'var(--color-border-light)' }} className="text-xs tracking-[0.3em] uppercase">✦</span>
-            <span className="label-caps" style={{ color: 'var(--color-accent)' }}>Holiday Planner</span>
-            <span style={{ color: 'var(--color-border-light)' }} className="text-xs tracking-[0.3em] uppercase">✦</span>
+        {/* Hero text */}
+        <div className="fade-up fade-up-1 text-center mb-8">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5"
+            style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.2)' }}
+          >
+            <span style={{ fontSize: '0.75rem' }}>✈️</span>
+            <span className="label-tag" style={{ color: 'var(--color-coral)', letterSpacing: '0.06em' }}>
+              Holiday Planner
+            </span>
           </div>
           <h1
-            className="font-display italic"
-            style={{ fontSize: '3.2rem', lineHeight: 1.05, fontWeight: 300, color: 'var(--color-cream)', letterSpacing: '-0.01em' }}
+            className="font-display"
+            style={{ fontSize: '3rem', lineHeight: 1.1, fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}
           >
-            When are<br />you free?
+            Let&apos;s find when<br />
+            <span style={{ color: 'var(--color-coral)' }}>everyone</span> can go
           </h1>
-          <p className="mt-4 text-sm" style={{ color: 'var(--color-muted)', letterSpacing: '0.02em' }}>
-            Find the perfect window for everyone.
+          <p className="mt-3 text-base" style={{ color: 'var(--color-muted)', fontWeight: 400 }}>
+            Share a link. No accounts. No fuss.
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Form card */}
+        <div className="fade-up fade-up-2 card p-6 shadow-lg" style={{ boxShadow: '0 8px 32px rgba(44,31,20,0.10)' }}>
+          <form onSubmit={handleSubmit} className="space-y-5">
 
-          <div className="fade-up fade-up-2">
-            <label className="label-caps block mb-2">Trip name</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Amalfi Coast, Summer '25"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              className="input-line"
-            />
-          </div>
+            <div>
+              <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>
+                Trip name
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Amalfi Coast, Summer '25"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className="field-input"
+              />
+            </div>
 
-          <div className="fade-up fade-up-3">
-            <label className="label-caps block mb-3">Date window</label>
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <p className="label-caps mb-2" style={{ fontSize: '0.6rem', opacity: 0.7 }}>From</p>
-                <input
-                  type="date"
-                  required
-                  min={today}
-                  value={windowStart}
-                  onChange={e => setWindowStart(e.target.value)}
-                  className="input-line"
-                />
-              </div>
-              <div>
-                <p className="label-caps mb-2" style={{ fontSize: '0.6rem', opacity: 0.7 }}>Until</p>
-                <input
-                  type="date"
-                  required
-                  min={windowStart || today}
-                  value={windowEnd}
-                  onChange={e => setWindowEnd(e.target.value)}
-                  className="input-line"
-                />
+            <div>
+              <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>
+                Date window
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="label-tag mb-1" style={{ color: 'var(--color-faint)', fontSize: '0.62rem' }}>Earliest</p>
+                  <input type="date" required min={today} value={windowStart} onChange={e => setWindowStart(e.target.value)} className="field-input" />
+                </div>
+                <div>
+                  <p className="label-tag mb-1" style={{ color: 'var(--color-faint)', fontSize: '0.62rem' }}>Latest</p>
+                  <input type="date" required min={windowStart || today} value={windowEnd} onChange={e => setWindowEnd(e.target.value)} className="field-input" />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="fade-up fade-up-4">
-            <label className="label-caps block mb-3">Duration (nights)</label>
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <p className="label-caps mb-2" style={{ fontSize: '0.6rem', opacity: 0.7 }}>Minimum</p>
-                <input
-                  type="number"
-                  required
-                  min={1}
-                  max={30}
-                  value={minDuration}
-                  onChange={e => setMinDuration(Number(e.target.value))}
-                  className="input-line"
-                />
-              </div>
-              <div>
-                <p className="label-caps mb-2" style={{ fontSize: '0.6rem', opacity: 0.7 }}>Maximum</p>
-                <input
-                  type="number"
-                  required
-                  min={1}
-                  max={30}
-                  value={maxDuration}
-                  onChange={e => setMaxDuration(Number(e.target.value))}
-                  className="input-line"
-                />
+            <div>
+              <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>
+                Trip length (nights)
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="label-tag mb-1" style={{ color: 'var(--color-faint)', fontSize: '0.62rem' }}>Minimum</p>
+                  <input type="number" required min={1} max={30} value={minDuration} onChange={e => setMinDuration(Number(e.target.value))} className="field-input" />
+                </div>
+                <div>
+                  <p className="label-tag mb-1" style={{ color: 'var(--color-faint)', fontSize: '0.62rem' }}>Maximum</p>
+                  <input type="number" required min={1} max={30} value={maxDuration} onChange={e => setMaxDuration(Number(e.target.value))} className="field-input" />
+                </div>
               </div>
             </div>
-          </div>
 
-          {error && (
-            <p className="fade-up text-xs" style={{ color: '#C47878' }}>{error}</p>
-          )}
+            {error && (
+              <p className="text-sm font-medium" style={{ color: 'var(--color-cantdo)' }}>{error}</p>
+            )}
 
-          <div className="fade-up fade-up-5 pt-2">
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 text-sm font-medium tracking-widest uppercase transition-all duration-200 disabled:opacity-40"
+              className="w-full py-3.5 rounded-xl font-display font-semibold text-lg transition-all duration-200 disabled:opacity-50"
               style={{
-                background: loading ? 'var(--color-accent-dim)' : 'var(--color-accent)',
-                color: 'var(--color-ink)',
-                letterSpacing: '0.15em',
+                background: loading ? 'var(--color-coral-dim)' : 'var(--color-coral)',
+                color: '#FFFFFF',
+                letterSpacing: '-0.01em',
+                boxShadow: loading ? 'none' : '0 4px 14px rgba(244,98,31,0.35)',
               }}
-              onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = '#B5804F'; }}
-              onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent)'; }}
+              onMouseEnter={e => { if (!loading) { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral-dim)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 8px rgba(244,98,31,0.25)'; }}}
+              onMouseLeave={e => { if (!loading) { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 14px rgba(244,98,31,0.35)'; }}}
             >
-              {loading ? 'Creating…' : 'Plan this trip →'}
+              {loading ? 'Creating your plan…' : 'Plan this trip ✈'}
             </button>
-          </div>
+          </form>
+        </div>
 
-        </form>
-
-        {/* Footer ornament */}
-        <div className="fade-up fade-up-6 mt-16 text-center">
-          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
-            <span className="label-caps" style={{ color: 'var(--color-faint)' }}>
-              Share a link · No account needed
-            </span>
-          </div>
+        {/* Footer note */}
+        <div className="fade-up fade-up-3 mt-6 text-center">
+          <p className="text-sm" style={{ color: 'var(--color-faint)' }}>
+            Your link works for everyone — no sign-up needed
+          </p>
         </div>
 
       </div>

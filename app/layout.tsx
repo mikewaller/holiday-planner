@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import { Fraunces, Nunito } from "next/font/google";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["300", "400", "600", "700", "900"],
   style: ["normal", "italic"],
 });
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${cormorant.variable} ${dmSans.variable} antialiased`}>
+      <body className={`${fraunces.variable} ${nunito.variable} antialiased`}>
         {children}
       </body>
     </html>
