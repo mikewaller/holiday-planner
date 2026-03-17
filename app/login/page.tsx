@@ -1,12 +1,10 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '/my-trips';
@@ -48,7 +46,6 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      // Try sign up if user not found
       if (error.message.toLowerCase().includes('invalid login')) {
         const { error: signUpError } = await supabase.auth.signUp({
           email, password,
@@ -65,10 +62,76 @@ export default function LoginPage() {
   }
 
   return (
+    <div className="fade-up fade-up-2 card p-6 shadow-lg" style={{ boxShadow: '0 8px 32px rgba(44,31,20,0.10)' }}>
+      {/* Tab switcher */}
+      <div className="flex rounded-xl p-1 mb-5" style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)' }}>
+        {(['magic', 'password'] as const).map(t => (
+          <button key={t} onClick={() => { setTab(t); setMessage(''); }}
+            className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-150"
+            style={{
+              background: tab === t ? 'var(--color-surface)' : 'transparent',
+              color: tab === t ? 'var(--color-ink)' : 'var(--color-faint)',
+              boxShadow: tab === t ? '0 1px 4px rgba(44,31,20,0.08)' : 'none',
+              fontFamily: 'var(--font-nunito)',
+              letterSpacing: '0.03em',
+            }}
+          >
+            {t === 'magic' ? '✉️ Magic link' : '🔒 Password'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'magic' ? (
+        <form onSubmit={sendMagicLink} className="space-y-4">
+          <div>
+            <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Email</label>
+            <input type="email" required placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className="field-input" />
+          </div>
+          <button type="submit" disabled={loading}
+            className="w-full py-3.5 rounded-xl font-display font-semibold text-lg transition-all duration-200 disabled:opacity-50"
+            style={{ background: 'var(--color-coral)', color: '#fff', letterSpacing: '-0.01em', boxShadow: '0 4px 14px rgba(244,98,31,0.35)' }}
+            onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral-dim)'; }}
+            onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral)'; }}
+          >
+            {loading ? 'Sending…' : 'Send magic link ✈'}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={signInWithPassword} className="space-y-4">
+          <div>
+            <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Email</label>
+            <input type="email" required placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className="field-input" />
+          </div>
+          <div>
+            <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Password</label>
+            <input type="password" required placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="field-input" />
+          </div>
+          <button type="submit" disabled={loading}
+            className="w-full py-3.5 rounded-xl font-display font-semibold text-lg transition-all duration-200 disabled:opacity-50"
+            style={{ background: 'var(--color-coral)', color: '#fff', letterSpacing: '-0.01em', boxShadow: '0 4px 14px rgba(244,98,31,0.35)' }}
+            onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral-dim)'; }}
+            onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral)'; }}
+          >
+            {loading ? 'Signing in…' : 'Sign in / Sign up'}
+          </button>
+          <p className="text-xs text-center" style={{ color: 'var(--color-faint)' }}>New here? We&apos;ll create an account automatically.</p>
+        </form>
+      )}
+
+      {message && (
+        <p className="mt-4 text-sm font-medium text-center" style={{ color: isError ? 'var(--color-cantdo)' : 'var(--color-preferred)' }}>
+          {message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
     <main className="dot-bg min-h-screen flex items-center justify-center p-4 py-12">
       <div className="w-full max-w-sm">
 
-        {/* Hero */}
         <div className="fade-up fade-up-1 text-center mb-8">
           <a href="/" className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-5"
             style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.2)' }}>
@@ -83,69 +146,9 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="fade-up fade-up-2 card p-6 shadow-lg" style={{ boxShadow: '0 8px 32px rgba(44,31,20,0.10)' }}>
-
-          {/* Tab switcher */}
-          <div className="flex rounded-xl p-1 mb-5" style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)' }}>
-            {(['magic', 'password'] as const).map(t => (
-              <button key={t} onClick={() => { setTab(t); setMessage(''); }}
-                className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-150"
-                style={{
-                  background: tab === t ? 'var(--color-surface)' : 'transparent',
-                  color: tab === t ? 'var(--color-ink)' : 'var(--color-faint)',
-                  boxShadow: tab === t ? '0 1px 4px rgba(44,31,20,0.08)' : 'none',
-                  fontFamily: 'var(--font-nunito)',
-                  letterSpacing: '0.03em',
-                }}
-              >
-                {t === 'magic' ? '✉️ Magic link' : '🔒 Password'}
-              </button>
-            ))}
-          </div>
-
-          {tab === 'magic' ? (
-            <form onSubmit={sendMagicLink} className="space-y-4">
-              <div>
-                <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Email</label>
-                <input type="email" required placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className="field-input" />
-              </div>
-              <button type="submit" disabled={loading}
-                className="w-full py-3.5 rounded-xl font-display font-semibold text-lg transition-all duration-200 disabled:opacity-50"
-                style={{ background: 'var(--color-coral)', color: '#fff', letterSpacing: '-0.01em', boxShadow: '0 4px 14px rgba(244,98,31,0.35)' }}
-                onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral-dim)'; }}
-                onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral)'; }}
-              >
-                {loading ? 'Sending…' : 'Send magic link ✈'}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={signInWithPassword} className="space-y-4">
-              <div>
-                <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Email</label>
-                <input type="email" required placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className="field-input" />
-              </div>
-              <div>
-                <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Password</label>
-                <input type="password" required placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="field-input" />
-              </div>
-              <button type="submit" disabled={loading}
-                className="w-full py-3.5 rounded-xl font-display font-semibold text-lg transition-all duration-200 disabled:opacity-50"
-                style={{ background: 'var(--color-coral)', color: '#fff', letterSpacing: '-0.01em', boxShadow: '0 4px 14px rgba(244,98,31,0.35)' }}
-                onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral-dim)'; }}
-                onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral)'; }}
-              >
-                {loading ? 'Signing in…' : 'Sign in / Sign up'}
-              </button>
-              <p className="text-xs text-center" style={{ color: 'var(--color-faint)' }}>New here? We&apos;ll create an account automatically.</p>
-            </form>
-          )}
-
-          {message && (
-            <p className="mt-4 text-sm font-medium text-center" style={{ color: isError ? 'var(--color-cantdo)' : 'var(--color-preferred)' }}>
-              {message}
-            </p>
-          )}
-        </div>
+        <Suspense fallback={<div className="card p-6" style={{ minHeight: '200px' }} />}>
+          <LoginForm />
+        </Suspense>
 
         <div className="fade-up fade-up-3 mt-6 text-center">
           <p className="text-sm" style={{ color: 'var(--color-faint)' }}>
