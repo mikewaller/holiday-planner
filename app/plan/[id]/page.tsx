@@ -177,12 +177,20 @@ export default function PlanPage() {
         <div className="fade-up fade-up-1 pt-6">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <div
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-3"
-                style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.18)' }}
-              >
-                <span style={{ fontSize: '0.7rem' }}>✈️</span>
-                <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>Holiday Planner</span>
+              <div className="flex items-center gap-2 mb-3">
+                <a href="/"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+                  style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.18)', textDecoration: 'none' }}
+                >
+                  <span style={{ fontSize: '0.7rem' }}>✈️</span>
+                  <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>Holiday Planner</span>
+                </a>
+                <a href="/my-trips"
+                  className="inline-flex items-center px-2.5 py-1 rounded-full label-tag"
+                  style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-muted)', textDecoration: 'none', fontSize: '0.62rem' }}
+                >
+                  My trips
+                </a>
               </div>
               <h1 className="font-display font-bold" style={{ fontSize: '2rem', lineHeight: 1.15, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}>
                 {plan.name}
