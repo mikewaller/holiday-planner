@@ -40,7 +40,6 @@ export default function Home() {
       const { id, creator_token } = await res.json();
 
       localStorage.setItem(`creator_token_${id}`, creator_token);
-
       router.push(`/plan/${id}?creator=${creator_token}`);
     } catch {
       setError('Something went wrong. Please try again.');
@@ -52,64 +51,78 @@ export default function Home() {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-700">Holiday Planner</h1>
-          <p className="text-gray-500 mt-2">Find the perfect dates for your group trip</p>
+    <main
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{ background: 'radial-gradient(ellipse at 50% 0%, #1A1610 0%, #0D0C0A 65%)' }}
+    >
+      <div className="w-full max-w-sm">
+
+        {/* Wordmark */}
+        <div className="fade-up fade-up-1 text-center mb-12">
+          <div className="inline-flex items-center gap-3 mb-8">
+            <span style={{ color: 'var(--color-border-light)' }} className="text-xs tracking-[0.3em] uppercase">✦</span>
+            <span className="label-caps" style={{ color: 'var(--color-accent)' }}>Holiday Planner</span>
+            <span style={{ color: 'var(--color-border-light)' }} className="text-xs tracking-[0.3em] uppercase">✦</span>
+          </div>
+          <h1
+            className="font-display italic"
+            style={{ fontSize: '3.2rem', lineHeight: 1.05, fontWeight: 300, color: 'var(--color-cream)', letterSpacing: '-0.01em' }}
+          >
+            When are<br />you free?
+          </h1>
+          <p className="mt-4 text-sm" style={{ color: 'var(--color-muted)', letterSpacing: '0.02em' }}>
+            Find the perfect window for everyone.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Holiday name
-            </label>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-8">
+
+          <div className="fade-up fade-up-2">
+            <label className="label-caps block mb-2">Trip name</label>
             <input
               type="text"
               required
-              placeholder="e.g. Summer Spain Trip"
+              placeholder="e.g. Amalfi Coast, Summer '25"
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="input-line"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Earliest possible date
-              </label>
-              <input
-                type="date"
-                required
-                min={today}
-                value={windowStart}
-                onChange={e => setWindowStart(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Latest possible date
-              </label>
-              <input
-                type="date"
-                required
-                min={windowStart || today}
-                value={windowEnd}
-                onChange={e => setWindowEnd(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              />
+          <div className="fade-up fade-up-3">
+            <label className="label-caps block mb-3">Date window</label>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="label-caps mb-2" style={{ fontSize: '0.6rem', opacity: 0.7 }}>From</p>
+                <input
+                  type="date"
+                  required
+                  min={today}
+                  value={windowStart}
+                  onChange={e => setWindowStart(e.target.value)}
+                  className="input-line"
+                />
+              </div>
+              <div>
+                <p className="label-caps mb-2" style={{ fontSize: '0.6rem', opacity: 0.7 }}>Until</p>
+                <input
+                  type="date"
+                  required
+                  min={windowStart || today}
+                  value={windowEnd}
+                  onChange={e => setWindowEnd(e.target.value)}
+                  className="input-line"
+                />
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Trip duration (nights)
-            </label>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="fade-up fade-up-4">
+            <label className="label-caps block mb-3">Duration (nights)</label>
+            <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Minimum</label>
+                <p className="label-caps mb-2" style={{ fontSize: '0.6rem', opacity: 0.7 }}>Minimum</p>
                 <input
                   type="number"
                   required
@@ -117,11 +130,11 @@ export default function Home() {
                   max={30}
                   value={minDuration}
                   onChange={e => setMinDuration(Number(e.target.value))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="input-line"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Maximum</label>
+                <p className="label-caps mb-2" style={{ fontSize: '0.6rem', opacity: 0.7 }}>Maximum</p>
                 <input
                   type="number"
                   required
@@ -129,22 +142,44 @@ export default function Home() {
                   max={30}
                   value={maxDuration}
                   onChange={e => setMaxDuration(Number(e.target.value))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="input-line"
                 />
               </div>
             </div>
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && (
+            <p className="fade-up text-xs" style={{ color: '#C47878' }}>{error}</p>
+          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
-          >
-            {loading ? 'Creating...' : 'Create Holiday Plan'}
-          </button>
+          <div className="fade-up fade-up-5 pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 text-sm font-medium tracking-widest uppercase transition-all duration-200 disabled:opacity-40"
+              style={{
+                background: loading ? 'var(--color-accent-dim)' : 'var(--color-accent)',
+                color: 'var(--color-ink)',
+                letterSpacing: '0.15em',
+              }}
+              onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = '#B5804F'; }}
+              onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent)'; }}
+            >
+              {loading ? 'Creating…' : 'Plan this trip →'}
+            </button>
+          </div>
+
         </form>
+
+        {/* Footer ornament */}
+        <div className="fade-up fade-up-6 mt-16 text-center">
+          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1.5rem' }}>
+            <span className="label-caps" style={{ color: 'var(--color-faint)' }}>
+              Share a link · No account needed
+            </span>
+          </div>
+        </div>
+
       </div>
     </main>
   );
