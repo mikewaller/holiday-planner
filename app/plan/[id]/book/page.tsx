@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { format, parseISO, addDays, eachDayOfInterval } from 'date-fns';
+import Nav from '@/components/Nav';
 
 interface Participant { id: string; name: string; }
 interface Availability { participant_id: string; date: string; status: string; }
@@ -49,6 +50,7 @@ function BookContent() {
 
   return (
     <main className="dot-bg min-h-screen p-4 pb-16">
+      <Nav />
       <div className="max-w-lg mx-auto">
 
         {/* Header */}

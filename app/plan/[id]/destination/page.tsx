@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { format, parseISO, addDays } from 'date-fns';
+import Nav from '@/components/Nav';
 
 function DestinationContent() {
   const params = useParams();
@@ -20,6 +21,7 @@ function DestinationContent() {
 
   return (
     <main className="dot-bg min-h-screen flex items-center justify-center p-4 py-12">
+      <Nav />
       <div className="w-full max-w-md">
 
         <div className="fade-up fade-up-1 text-center mb-8">

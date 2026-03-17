@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import Nav from '@/components/Nav';
 
 function LoginForm() {
   const router = useRouter();
@@ -130,6 +131,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <main className="dot-bg min-h-screen flex items-center justify-center p-4 py-12">
+      <Nav />
       <div className="w-full max-w-sm">
 
         <div className="fade-up fade-up-1 text-center mb-8">

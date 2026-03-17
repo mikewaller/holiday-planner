@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import Nav from '@/components/Nav';
 import { addDays, format, parseISO, eachDayOfInterval } from 'date-fns';
 
 type Status = 'free' | 'cant_do' | 'preferred';
@@ -40,6 +41,7 @@ export default function PlanPage() {
   const [copied, setCopied] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
   const [activeMonthIndex, setActiveMonthIndex] = useState(0);
   const [poppingDate, setPoppingDate] = useState<string | null>(null);
 
@@ -169,8 +171,11 @@ export default function PlanPage() {
     if (last && last.label === label) last.dates.push(ds); else months.push({ label, dates: [ds] });
   }
 
+  const hoveredBreakdown = hoveredDate ? getDateBreakdown(hoveredDate) : null;
+
   return (
     <main className="dot-bg min-h-screen p-4 pb-16">
+      <Nav />
       <div className="max-w-xl mx-auto space-y-4">
 
         {/* ── Header ─────────────────────────────────────── */}
@@ -184,12 +189,6 @@ export default function PlanPage() {
                 >
                   <span style={{ fontSize: '0.7rem' }}>✈️</span>
                   <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>Hatch a Plan</span>
-                </a>
-                <a href="/my-trips"
-                  className="inline-flex items-center px-2.5 py-1 rounded-full label-tag"
-                  style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-muted)', textDecoration: 'none', fontSize: '0.62rem' }}
-                >
-                  My trips
                 </a>
               </div>
               <h1 className="font-display font-bold" style={{ fontSize: '2rem', lineHeight: 1.15, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}>
@@ -239,6 +238,16 @@ export default function PlanPage() {
           >
             {copied ? '✓ Copied!' : 'Copy link'}
           </button>
+        </div>
+
+        {/* ── Sign-up info ────────────────────────────────── */}
+        <div className="fade-up fade-up-2 px-4 py-3 rounded-xl flex items-start gap-3" style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.15)' }}>
+          <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: '0.05rem' }}>💡</span>
+          <p className="text-sm" style={{ color: 'var(--color-muted)', lineHeight: 1.5 }}>
+            No account needed — anyone with this link can join and mark their availability.{' '}
+            <a href="/login" style={{ color: 'var(--color-coral)', textDecoration: 'none', fontWeight: 600 }}>Sign in</a>
+            {' '}to keep all your created trips in one place. This plan will always be accessible at this URL.
+          </p>
         </div>
 
         {/* ── Join / identity ─────────────────────────────── */}
@@ -328,15 +337,18 @@ export default function PlanPage() {
                     const cfg = myStatus ? STATUS_CONFIG[myStatus] : null;
                     const hasAnyResponse = stats.preferred + stats.free + stats.cant_do > 0;
                     const isClickable = !!me && !plan.is_locked;
-                    const breakdown = participants.length > 0 ? getDateBreakdown(date) : null;
                     const isPopping = poppingDate === date;
 
                     return (
                       <div
                         key={date}
                         onClick={() => isClickable && toggleDate(date)}
-                        onMouseEnter={() => setHoveredDate(date)}
-                        onMouseLeave={() => setHoveredDate(null)}
+                        onMouseEnter={e => {
+                          setHoveredDate(date);
+                          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                          setTooltipPos({ top: rect.top, left: rect.left + rect.width / 2 });
+                        }}
+                        onMouseLeave={() => { setHoveredDate(null); setTooltipPos(null); }}
                         className={`relative aspect-square flex flex-col items-center justify-center text-xs font-semibold transition-all duration-150 ${isPopping ? 'cell-pop' : ''} ${isClickable ? 'cursor-pointer' : ''}`}
                         style={{
                           background: cfg ? cfg.cellBg : 'var(--color-bg)',
@@ -344,7 +356,6 @@ export default function PlanPage() {
                           borderRadius: '10px',
                           border: cfg ? 'none' : '1.5px solid var(--color-border)',
                           boxShadow: cfg ? '0 2px 6px rgba(0,0,0,0.12)' : 'none',
-                          transform: isClickable && !cfg ? undefined : undefined,
                         }}
                         onMouseOver={e => { if (isClickable) (e.currentTarget as HTMLDivElement).style.opacity = '0.82'; }}
                         onMouseOut={e => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
@@ -357,39 +368,6 @@ export default function PlanPage() {
                             {stats.preferred > 0 && <span className="w-1 h-1 rounded-full" style={{ background: STATUS_CONFIG.preferred.dot }} />}
                             {stats.free > 0 && <span className="w-1 h-1 rounded-full" style={{ background: STATUS_CONFIG.free.dot }} />}
                             {stats.cant_do > 0 && <span className="w-1 h-1 rounded-full" style={{ background: STATUS_CONFIG.cant_do.dot }} />}
-                          </div>
-                        )}
-                        {/* Tooltip */}
-                        {hoveredDate === date && breakdown && participants.length > 0 && (
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none"
-                            style={{ width: '12rem', background: 'var(--color-ink)', borderRadius: '12px', padding: '0.75rem', boxShadow: '0 8px 24px rgba(44,31,20,0.22)' }}>
-                            <p className="label-tag mb-2" style={{ color: 'var(--color-coral)', fontSize: '0.6rem' }}>
-                              {format(parseISO(date), 'd MMMM yyyy')}
-                            </p>
-                            {breakdown.preferred.length > 0 && (
-                              <div className="mb-1 text-xs" style={{ color: STATUS_CONFIG.preferred.dot }}>
-                                <span className="font-semibold">Preferred: </span>
-                                <span style={{ color: '#E5E7EB', fontWeight: 400 }}>{breakdown.preferred.join(', ')}</span>
-                              </div>
-                            )}
-                            {breakdown.free.length > 0 && (
-                              <div className="mb-1 text-xs" style={{ color: STATUS_CONFIG.free.dot }}>
-                                <span className="font-semibold">Free: </span>
-                                <span style={{ color: '#E5E7EB', fontWeight: 400 }}>{breakdown.free.join(', ')}</span>
-                              </div>
-                            )}
-                            {breakdown.cant_do.length > 0 && (
-                              <div className="mb-1 text-xs" style={{ color: STATUS_CONFIG.cant_do.dot }}>
-                                <span className="font-semibold">Can&apos;t do: </span>
-                                <span style={{ color: '#E5E7EB', fontWeight: 400 }}>{breakdown.cant_do.join(', ')}</span>
-                              </div>
-                            )}
-                            {breakdown.no_answer.length > 0 && (
-                              <div className="text-xs" style={{ color: '#6B7280' }}>
-                                <span className="font-semibold">No answer: </span>
-                                <span style={{ fontWeight: 400 }}>{breakdown.no_answer.join(', ')}</span>
-                              </div>
-                            )}
                           </div>
                         )}
                       </div>
@@ -463,6 +441,53 @@ export default function PlanPage() {
         )}
 
       </div>
+
+      {/* ── Fixed calendar tooltip (escapes overflow:hidden) ─ */}
+      {hoveredDate && hoveredBreakdown && participants.length > 0 && tooltipPos && (
+        <div
+          className="pointer-events-none"
+          style={{
+            position: 'fixed',
+            top: tooltipPos.top - 8,
+            left: tooltipPos.left,
+            transform: 'translate(-50%, -100%)',
+            zIndex: 9999,
+            width: '12rem',
+            background: 'var(--color-ink)',
+            borderRadius: '12px',
+            padding: '0.75rem',
+            boxShadow: '0 8px 24px rgba(44,31,20,0.22)',
+          }}
+        >
+          <p className="label-tag mb-2" style={{ color: 'var(--color-coral)', fontSize: '0.6rem' }}>
+            {format(parseISO(hoveredDate), 'd MMMM yyyy')}
+          </p>
+          {hoveredBreakdown.preferred.length > 0 && (
+            <div className="mb-1 text-xs" style={{ color: STATUS_CONFIG.preferred.dot }}>
+              <span className="font-semibold">Preferred: </span>
+              <span style={{ color: '#E5E7EB', fontWeight: 400 }}>{hoveredBreakdown.preferred.join(', ')}</span>
+            </div>
+          )}
+          {hoveredBreakdown.free.length > 0 && (
+            <div className="mb-1 text-xs" style={{ color: STATUS_CONFIG.free.dot }}>
+              <span className="font-semibold">Free: </span>
+              <span style={{ color: '#E5E7EB', fontWeight: 400 }}>{hoveredBreakdown.free.join(', ')}</span>
+            </div>
+          )}
+          {hoveredBreakdown.cant_do.length > 0 && (
+            <div className="mb-1 text-xs" style={{ color: STATUS_CONFIG.cant_do.dot }}>
+              <span className="font-semibold">Can&apos;t do: </span>
+              <span style={{ color: '#E5E7EB', fontWeight: 400 }}>{hoveredBreakdown.cant_do.join(', ')}</span>
+            </div>
+          )}
+          {hoveredBreakdown.no_answer.length > 0 && (
+            <div className="text-xs" style={{ color: '#6B7280' }}>
+              <span className="font-semibold">No answer: </span>
+              <span style={{ fontWeight: 400 }}>{hoveredBreakdown.no_answer.join(', ')}</span>
+            </div>
+          )}
+        </div>
+      )}
     </main>
   );
 }
