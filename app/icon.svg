@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Warm cream background with rounded corners -->
+  <rect width="32" height="32" rx="7" fill="#FFFAF3"/>
+  <!-- Paper plane (send icon) in coral, centered with slight upward tilt -->
+  <g transform="translate(16,16) rotate(-35) translate(-11,-9)">
+    <path d="M2 18L22 9L2 0V7L17 9L2 11V18Z" fill="#F4621F"/>
+  </g>
+</svg>
