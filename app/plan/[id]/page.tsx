@@ -197,9 +197,6 @@ export default function PlanPage() {
               </div>
             </div>
             <div className="flex gap-2 flex-wrap mt-1">
-              <button onClick={copyShareLink} className="label-tag px-3 py-2 rounded-xl transition-all duration-150" style={{ background: copied ? '#ECFDF5' : 'var(--color-surface)', border: '1.5px solid var(--color-border)', color: copied ? '#065F46' : 'var(--color-muted)' }}>
-                {copied ? '✓ Copied!' : 'Share link'}
-              </button>
               {creatorToken && <>
                 <button onClick={toggleLock} disabled={actionLoading} className="label-tag px-3 py-2 rounded-xl transition-all duration-150 disabled:opacity-40" style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)' }}>
                   {plan.is_locked ? 'Unlock' : 'Lock'}
@@ -210,6 +207,27 @@ export default function PlanPage() {
               </>}
             </div>
           </div>
+        </div>
+
+        {/* ── Share link box ──────────────────────────────── */}
+        <div className="fade-up fade-up-2 card px-4 py-3 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="label-tag mb-0.5" style={{ color: 'var(--color-faint)' }}>Share with your group</p>
+            <p className="text-sm font-medium truncate" style={{ color: 'var(--color-muted)' }}>
+              {typeof window !== 'undefined' ? `${window.location.origin}/plan/${planId}` : `/plan/${planId}`}
+            </p>
+          </div>
+          <button
+            onClick={copyShareLink}
+            className="label-tag px-4 py-2.5 rounded-xl transition-all duration-150 flex-shrink-0"
+            style={{
+              background: copied ? '#ECFDF5' : 'var(--color-coral)',
+              color: copied ? '#065F46' : '#fff',
+              boxShadow: copied ? 'none' : '0 2px 8px rgba(244,98,31,0.25)',
+            }}
+          >
+            {copied ? '✓ Copied!' : 'Copy link'}
+          </button>
         </div>
 
         {/* ── Join / identity ─────────────────────────────── */}
