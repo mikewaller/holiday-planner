@@ -22,9 +22,18 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const plans = await sql<PlanRow[]>`
-    SELECT * FROM plans WHERE user_id = ${user.id} ORDER BY created_at DESC
-  `;
+  const [plans, contributed] = await Promise.all([
+    sql<PlanRow[]>`
+      SELECT * FROM plans WHERE user_id = ${user.id} ORDER BY created_at DESC
+    `,
+    sql<PlanRow[]>`
+      SELECT DISTINCT p.* FROM plans p
+      INNER JOIN participants pt ON pt.plan_id = p.id
+      WHERE pt.user_id = ${user.id}
+        AND p.user_id != ${user.id}
+      ORDER BY p.created_at DESC
+    `,
+  ]);
 
-  return NextResponse.json({ plans });
+  return NextResponse.json({ plans, contributed });
 }

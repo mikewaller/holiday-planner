@@ -40,6 +40,7 @@ export default function PlanPage() {
   const [nameError, setNameError] = useState('');
   const [joiningName, setJoiningName] = useState(false);
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [autoJoinName, setAutoJoinName] = useState<string | null>(null);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [copied, setCopied] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -68,8 +69,37 @@ export default function PlanPage() {
     if (stored) setMe(JSON.parse(stored));
   }, [planId]);
   useEffect(() => {
-    createClient().auth.getUser().then(({ data: { user } }) => setAuthed(!!user));
+    createClient().auth.getUser().then(({ data: { user } }) => {
+      setAuthed(!!user);
+      if (user?.user_metadata?.full_name) {
+        const name = user.user_metadata.full_name;
+        setNameInput(name);
+        setAutoJoinName(name);
+      }
+    });
   }, []);
+
+  // Auto-join for logged-in users who have a display name set
+  useEffect(() => {
+    if (!autoJoinName || !plan || me || plan.is_locked) return;
+    const stored = localStorage.getItem(`participant_${planId}`);
+    if (stored) return; // already joined on this device
+    const storedToken = localStorage.getItem(`participant_token_${planId}_${autoJoinName}`);
+    fetch('/api/availability', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_id: planId, name: autoJoinName, participant_token: storedToken }),
+    }).then(async res => {
+      if (res.status === 409) return; // name taken — let them pick manually
+      if (!res.ok) return;
+      const { participant_id, participant_token } = await res.json();
+      const meData = { id: participant_id, name: autoJoinName, token: participant_token };
+      setMe(meData);
+      localStorage.setItem(`participant_${planId}`, JSON.stringify(meData));
+      fetchPlan();
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoJoinName, plan]);
 
   async function joinPlan() {
     if (!nameInput.trim()) return;

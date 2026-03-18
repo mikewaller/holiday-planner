@@ -21,8 +21,12 @@ CREATE TABLE IF NOT EXISTS participants (
   id TEXT PRIMARY KEY,
   plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  participant_token TEXT NOT NULL
+  participant_token TEXT NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL
 );
+
+-- Run this if you already have the participants table and need to add user_id:
+-- ALTER TABLE participants ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS availability (
   id TEXT PRIMARY KEY,

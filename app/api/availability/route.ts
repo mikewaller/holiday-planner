@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import sql from '@/lib/db';
+import { createClient } from '@/lib/supabase/server';
 
 interface PlanRow { id: string; is_locked: number; }
-interface ParticipantRow { id: string; name: string; participant_token: string; }
+interface ParticipantRow { id: string; name: string; participant_token: string; user_id: string | null; }
 
 export async function POST(req: NextRequest) {
   const { plan_id, name, participant_token } = await req.json();
@@ -16,11 +17,20 @@ export async function POST(req: NextRequest) {
   if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
   if (plan.is_locked) return NextResponse.json({ error: 'Plan is locked' }, { status: 403 });
 
+  // Get logged-in user if available (optional — anonymous users can still join)
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id ?? null;
+
   if (participant_token) {
     const [existing] = await sql<ParticipantRow[]>`
       SELECT * FROM participants WHERE plan_id = ${plan_id} AND participant_token = ${participant_token}
     `;
     if (existing) {
+      // Update user_id if they've since signed in
+      if (userId && !existing.user_id) {
+        await sql`UPDATE participants SET user_id = ${userId} WHERE id = ${existing.id}`;
+      }
       return NextResponse.json({ participant_id: existing.id, participant_token });
     }
   }
@@ -32,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const id = uuidv4();
   const token = uuidv4();
-  await sql`INSERT INTO participants (id, plan_id, name, participant_token) VALUES (${id}, ${plan_id}, ${name}, ${token})`;
+  await sql`INSERT INTO participants (id, plan_id, name, participant_token, user_id) VALUES (${id}, ${plan_id}, ${name}, ${token}, ${userId})`;
 
   return NextResponse.json({ participant_id: id, participant_token: token });
 }
