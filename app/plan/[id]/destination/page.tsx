@@ -101,6 +101,92 @@ function KnownDestination({
   );
 }
 
+// ─── Flight list (shared between desktop panel and mobile sheet) ─────────────
+
+function FlightList({ sorted, selected, origin, currency, onSelect }: {
+  sorted: FlightDestination[];
+  selected: string | null;
+  origin: string;
+  currency: string;
+  onSelect: (iata: string) => void;
+}) {
+  if (sorted.length === 0) {
+    return <p className="text-sm text-center py-8" style={{ color: 'var(--color-muted)' }}>No results match your filter.</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {sorted.map((dest, i) => {
+        const isSelected = dest.destination === selected;
+        const flightsUrl = `https://www.google.com/flights#flt=${origin}.${dest.destination}.${dest.departureDate}*${dest.destination}.${origin}.${dest.returnDate};tt:o`;
+        return (
+          <div
+            key={dest.destination}
+            data-iata={dest.destination}
+            onClick={() => onSelect(dest.destination)}
+            className="card px-4 py-3 cursor-pointer transition-all duration-150"
+            style={{
+              border: isSelected ? '1.5px solid var(--color-coral)' : '1.5px solid var(--color-border)',
+              boxShadow: isSelected ? '0 4px 16px rgba(244,98,31,0.15)' : 'none',
+            }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="label-tag flex-shrink-0" style={{ color: 'var(--color-faint)', minWidth: '1.4rem' }}>#{i + 1}</span>
+                <div className="min-w-0">
+                  <p className="font-display font-bold text-sm truncate" style={{ color: 'var(--color-ink)' }}>{dest.city}</p>
+                  <p className="text-xs truncate" style={{ color: 'var(--color-muted)' }}>{dest.country} · {dest.destination}</p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="font-display font-bold text-base" style={{ color: 'var(--color-coral)' }}>{currency}{dest.price.toFixed(0)}</p>
+                {dest.climate ? (
+                  <p className="text-xs font-medium" style={{ color: 'var(--color-muted)' }}>
+                    {climateEmoji(dest.climate.avgHigh, dest.climate.rainyDays)} ~{dest.climate.avgHigh}°C
+                  </p>
+                ) : (
+                  <p className="text-xs" style={{ color: 'var(--color-faint)' }}>per person</p>
+                )}
+              </div>
+            </div>
+            {isSelected && (
+              <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+                {dest.climate && (
+                  <div className="mb-3 px-1 flex items-center gap-3">
+                    <span style={{ fontSize: '1.3rem' }}>{climateEmoji(dest.climate.avgHigh, dest.climate.rainyDays)}</span>
+                    <div>
+                      <p className="text-xs font-semibold" style={{ color: 'var(--color-ink)' }}>
+                        {climateLabel(dest.climate.avgHigh, dest.climate.rainyDays)} · {dest.climate.avgLow}–{dest.climate.avgHigh}°C
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--color-faint)' }}>
+                        ~{dest.climate.rainyDays} rainy day{dest.climate.rainyDays !== 1 ? 's' : ''} · 10-year avg
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <a href={flightsUrl} target="_blank" rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    className="flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-all duration-150"
+                    style={{ background: 'var(--color-coral)', color: '#fff', textDecoration: 'none' }}>
+                    View flights →
+                  </a>
+                  <a href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(dest.city)}&checkin=${dest.departureDate}&checkout=${dest.returnDate}&group_adults=2`}
+                    target="_blank" rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    className="flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-all duration-150"
+                    style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', textDecoration: 'none' }}>
+                    Hotels
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Discover mode ────────────────────────────────────────────────────────────
 
 type SortKey = 'price_asc' | 'price_desc' | 'temp_asc' | 'temp_desc';
@@ -121,6 +207,7 @@ function DiscoverDestination({
   const [maxPriceMax, setMaxPriceMax] = useState<number>(9999);
   const [minTempFilter, setMinTempFilter] = useState<number>(0);
   const [colorBy, setColorBy] = useState<'price' | 'temp'>('price');
+  const [showPanel, setShowPanel] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   const departureDate = startDate ? format(startDate, 'yyyy-MM-dd') : '';
@@ -196,17 +283,17 @@ function DiscoverDestination({
         </div>
 
         {/* Search bar */}
-        <div className="flex gap-2 items-center">
-          <div className="flex items-center gap-2 card px-3 py-2 flex-1 max-w-xs" style={{ boxShadow: 'none' }}>
+        <div className="flex gap-2 items-center overflow-x-auto pb-0.5">
+          <div className="flex items-center gap-2 card px-3 py-2 flex-shrink-0" style={{ boxShadow: 'none', minWidth: '160px' }}>
             <span className="label-tag flex-shrink-0" style={{ color: 'var(--color-faint)' }}>Flying from</span>
             <input
               type="text"
-              placeholder="e.g. LHR, LGW, JFK…"
+              placeholder="LHR…"
               value={originInput}
               onChange={e => setOriginInput(e.target.value.toUpperCase())}
               onKeyDown={e => { if (e.key === 'Enter') { setOrigin(originInput); setTimeout(search, 0); } }}
               className="flex-1 bg-transparent outline-none text-sm font-semibold"
-              style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-nunito)', minWidth: 0 }}
+              style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-nunito)', minWidth: 0, width: '3rem' }}
               maxLength={3}
             />
           </div>
@@ -219,8 +306,9 @@ function DiscoverDestination({
             {loading ? 'Searching…' : 'Search'}
           </button>
 
+          {/* Desktop-only filters inline */}
           {destinations.length > 0 && (
-            <>
+            <div className="hidden md:flex items-center gap-2 flex-shrink-0">
               <select
                 value={sort}
                 onChange={e => setSort(e.target.value as SortKey)}
@@ -232,40 +320,28 @@ function DiscoverDestination({
                 <option value="temp_desc">Hottest first</option>
                 <option value="temp_asc">Coolest first</option>
               </select>
-              <div className="flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', flexShrink: 0 }}>
+              <div className="flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)' }}>
                 <span className="label-tag" style={{ color: 'var(--color-faint)', whiteSpace: 'nowrap' }}>Max {currency}{maxPrice === maxPriceMax ? '∞' : maxPrice}</span>
-                <input
-                  type="range" min={0} max={maxPriceMax} step={10}
-                  value={maxPrice}
+                <input type="range" min={0} max={maxPriceMax} step={10} value={maxPrice}
                   onChange={e => setMaxPrice(Number(e.target.value))}
-                  style={{ width: '80px', accentColor: 'var(--color-coral)' }}
-                />
+                  style={{ width: '80px', accentColor: 'var(--color-coral)' }} />
               </div>
-              <div className="flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', flexShrink: 0 }}>
+              <div className="flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)' }}>
                 <span className="label-tag" style={{ color: 'var(--color-faint)', whiteSpace: 'nowrap' }}>Min {minTempFilter}°C</span>
-                <input
-                  type="range" min={0} max={40} step={5}
-                  value={minTempFilter}
+                <input type="range" min={0} max={40} step={5} value={minTempFilter}
                   onChange={e => setMinTempFilter(Number(e.target.value))}
-                  style={{ width: '80px', accentColor: 'var(--color-coral)' }}
-                />
+                  style={{ width: '80px', accentColor: 'var(--color-coral)' }} />
               </div>
-              <div className="flex items-center gap-1 card px-1 py-1" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', flexShrink: 0, borderRadius: '10px' }}>
+              <div className="flex items-center gap-1 card px-1 py-1" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', borderRadius: '10px' }}>
                 {(['price', 'temp'] as const).map(mode => (
-                  <button
-                    key={mode}
-                    onClick={() => setColorBy(mode)}
+                  <button key={mode} onClick={() => setColorBy(mode)}
                     className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
-                    style={{
-                      background: colorBy === mode ? 'var(--color-ink)' : 'transparent',
-                      color: colorBy === mode ? '#fff' : 'var(--color-muted)',
-                    }}
-                  >
+                    style={{ background: colorBy === mode ? 'var(--color-ink)' : 'transparent', color: colorBy === mode ? '#fff' : 'var(--color-muted)' }}>
                     {mode === 'price' ? '💰 Price' : '🌡️ Temp'}
                   </button>
                 ))}
               </div>
-            </>
+            </div>
           )}
         </div>
 
@@ -285,10 +361,10 @@ function DiscoverDestination({
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex gap-0 overflow-hidden">
+        <div className="flex-1 flex gap-0 overflow-hidden relative">
 
-          {/* Map */}
-          <div className="flex-1 p-3 pr-1.5" style={{ minWidth: 0 }}>
+          {/* Map — full width on mobile, flex-1 on desktop */}
+          <div className="flex-1 p-3 md:pr-1.5" style={{ minWidth: 0 }}>
             <div style={{ height: '100%', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid var(--color-border)' }}>
               <FlightMap
                 destinations={sorted}
@@ -300,89 +376,91 @@ function DiscoverDestination({
             </div>
           </div>
 
-          {/* Flight list */}
-          <div className="flex-shrink-0 overflow-y-auto p-3 pl-1.5" style={{ width: '320px' }} ref={listRef}>
-            <div className="space-y-2">
-              {sorted.length === 0 && (
-                <p className="text-sm text-center py-8" style={{ color: 'var(--color-muted)' }}>No results match your filter.</p>
-              )}
-              {sorted.map((dest, i) => {
-                const isSelected = dest.destination === selected;
-                const flightsUrl = `https://www.google.com/flights#flt=${origin}.${dest.destination}.${dest.departureDate}*${dest.destination}.${origin}.${dest.returnDate};tt:o`;
-                return (
-                  <div
-                    key={dest.destination}
-                    data-iata={dest.destination}
-                    onClick={() => handleSelect(dest.destination)}
-                    className="card px-4 py-3 cursor-pointer transition-all duration-150"
-                    style={{
-                      border: isSelected ? '1.5px solid var(--color-coral)' : '1.5px solid var(--color-border)',
-                      boxShadow: isSelected ? '0 4px 16px rgba(244,98,31,0.15)' : 'none',
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="label-tag flex-shrink-0" style={{ color: 'var(--color-faint)', minWidth: '1.4rem' }}>#{i + 1}</span>
-                        <div className="min-w-0">
-                          <p className="font-display font-bold text-sm truncate" style={{ color: 'var(--color-ink)' }}>{dest.city}</p>
-                          <p className="text-xs truncate" style={{ color: 'var(--color-muted)' }}>{dest.country} · {dest.destination}</p>
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="font-display font-bold text-base" style={{ color: 'var(--color-coral)' }}>{currency}{dest.price.toFixed(0)}</p>
-                        {dest.climate ? (
-                          <p className="text-xs font-medium" style={{ color: 'var(--color-muted)' }}>
-                            {climateEmoji(dest.climate.avgHigh, dest.climate.rainyDays)} ~{dest.climate.avgHigh}°C
-                          </p>
-                        ) : (
-                          <p className="text-xs" style={{ color: 'var(--color-faint)' }}>per person</p>
-                        )}
-                      </div>
-                    </div>
-                    {isSelected && (
-                      <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
-                        {/* Climate row */}
-                        {dest.climate && (
-                          <div className="mb-3 px-1 flex items-center gap-3">
-                            <span style={{ fontSize: '1.3rem' }}>{climateEmoji(dest.climate.avgHigh, dest.climate.rainyDays)}</span>
-                            <div>
-                              <p className="text-xs font-semibold" style={{ color: 'var(--color-ink)' }}>
-                                {climateLabel(dest.climate.avgHigh, dest.climate.rainyDays)} · {dest.climate.avgLow}–{dest.climate.avgHigh}°C
-                              </p>
-                              <p className="text-xs" style={{ color: 'var(--color-faint)' }}>
-                                ~{dest.climate.rainyDays} rainy day{dest.climate.rainyDays !== 1 ? 's' : ''} · 10-year avg
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        {/* Action buttons */}
-                        <div className="flex gap-2">
-                          <a
-                            href={flightsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={e => e.stopPropagation()}
-                            className="flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-all duration-150"
-                            style={{ background: 'var(--color-coral)', color: '#fff', textDecoration: 'none' }}
-                          >
-                            View flights →
-                          </a>
-                          <a
-                            href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(dest.city)}&checkin=${dest.departureDate}&checkout=${dest.returnDate}&group_adults=2`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={e => e.stopPropagation()}
-                            className="flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-all duration-150"
-                            style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', textDecoration: 'none' }}
-                          >
-                            Hotels
-                          </a>
-                        </div>
-                      </div>
-                    )}
+          {/* Desktop flight list — side panel */}
+          <div className="hidden md:block flex-shrink-0 overflow-y-auto p-3 pl-1.5" style={{ width: '320px' }} ref={listRef}>
+            <FlightList sorted={sorted} selected={selected} origin={origin} currency={currency} onSelect={handleSelect} />
+          </div>
+
+          {/* Mobile FAB — toggle panel */}
+          {sorted.length > 0 && (
+            <button
+              onClick={() => setShowPanel(true)}
+              className="md:hidden absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-white shadow-lg"
+              style={{ background: 'var(--color-ink)', boxShadow: '0 4px 20px rgba(44,31,20,0.35)', zIndex: 1000 }}
+            >
+              <span>✈️</span>
+              <span>{sorted.length} destination{sorted.length !== 1 ? 's' : ''}</span>
+              <span style={{ opacity: 0.6 }}>↑</span>
+            </button>
+          )}
+
+          {/* Mobile bottom sheet */}
+          <div
+            className="md:hidden fixed inset-0 z-40 transition-opacity duration-300"
+            style={{ background: 'rgba(0,0,0,0.4)', opacity: showPanel ? 1 : 0, pointerEvents: showPanel ? 'auto' : 'none' }}
+            onClick={() => setShowPanel(false)}
+          />
+          <div
+            className="md:hidden fixed left-0 right-0 bottom-0 z-50 flex flex-col"
+            style={{
+              height: '80dvh',
+              background: 'var(--color-bg)',
+              borderRadius: '20px 20px 0 0',
+              boxShadow: '0 -8px 40px rgba(44,31,20,0.18)',
+              transform: showPanel ? 'translateY(0)' : 'translateY(100%)',
+              transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+            }}
+          >
+            {/* Sheet header */}
+            <div className="flex-shrink-0 px-4 pt-4 pb-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-display font-bold text-base" style={{ color: 'var(--color-ink)' }}>
+                  {sorted.length} destination{sorted.length !== 1 ? 's' : ''}
+                </p>
+                <button onClick={() => setShowPanel(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold"
+                  style={{ background: 'var(--color-border)', color: 'var(--color-muted)' }}>✕</button>
+              </div>
+              {/* Filters inside sheet on mobile */}
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2 items-center">
+                  <select value={sort} onChange={e => setSort(e.target.value as SortKey)}
+                    className="flex-1 card px-3 py-2 text-sm font-semibold outline-none cursor-pointer"
+                    style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-nunito)', boxShadow: 'none', border: '1.5px solid var(--color-border)' }}>
+                    <option value="price_asc">Price: Low → High</option>
+                    <option value="price_desc">Price: High → Low</option>
+                    <option value="temp_desc">Hottest first</option>
+                    <option value="temp_asc">Coolest first</option>
+                  </select>
+                  <div className="flex items-center gap-1 card px-1 py-1 flex-shrink-0" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', borderRadius: '10px' }}>
+                    {(['price', 'temp'] as const).map(mode => (
+                      <button key={mode} onClick={() => setColorBy(mode)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
+                        style={{ background: colorBy === mode ? 'var(--color-ink)' : 'transparent', color: colorBy === mode ? '#fff' : 'var(--color-muted)' }}>
+                        {mode === 'price' ? '💰' : '🌡️'}
+                      </button>
+                    ))}
                   </div>
-                );
-              })}
+                </div>
+                <div className="flex gap-3 items-center">
+                  <div className="flex-1 flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)' }}>
+                    <span className="label-tag flex-shrink-0" style={{ color: 'var(--color-faint)' }}>Max {currency}{maxPrice === maxPriceMax ? '∞' : maxPrice}</span>
+                    <input type="range" min={0} max={maxPriceMax} step={10} value={maxPrice}
+                      onChange={e => setMaxPrice(Number(e.target.value))}
+                      className="flex-1" style={{ accentColor: 'var(--color-coral)' }} />
+                  </div>
+                  <div className="flex-1 flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)' }}>
+                    <span className="label-tag flex-shrink-0" style={{ color: 'var(--color-faint)' }}>Min {minTempFilter}°C</span>
+                    <input type="range" min={0} max={40} step={5} value={minTempFilter}
+                      onChange={e => setMinTempFilter(Number(e.target.value))}
+                      className="flex-1" style={{ accentColor: 'var(--color-coral)' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Scrollable list */}
+            <div className="flex-1 overflow-y-auto p-3" ref={listRef}>
+              <FlightList sorted={sorted} selected={selected} origin={origin} currency={currency} onSelect={(iata) => { handleSelect(iata); setShowPanel(false); }} />
             </div>
           </div>
 
