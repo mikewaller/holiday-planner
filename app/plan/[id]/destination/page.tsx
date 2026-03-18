@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useRef } from 'react';
+import { Suspense, useState, useRef, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { format, parseISO, addDays } from 'date-fns';
 import dynamic from 'next/dynamic';
@@ -208,7 +208,15 @@ function DiscoverDestination({
   const [minTempFilter, setMinTempFilter] = useState<number>(0);
   const [colorBy, setColorBy] = useState<'price' | 'temp'>('price');
   const [showPanel, setShowPanel] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const departureDate = startDate ? format(startDate, 'yyyy-MM-dd') : '';
   const duration = nights.toString();
@@ -308,8 +316,8 @@ function DiscoverDestination({
           </button>
 
           {/* Desktop-only filters inline */}
-          {destinations.length > 0 && (
-            <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+          {destinations.length > 0 && !isMobile && (
+            <div className="flex items-center gap-2 flex-shrink-0">
               <select
                 value={sort}
                 onChange={e => setSort(e.target.value as SortKey)}
@@ -378,15 +386,17 @@ function DiscoverDestination({
           </div>
 
           {/* Desktop flight list — side panel */}
-          <div className="hidden md:block flex-shrink-0 overflow-y-auto p-3 pl-1.5" style={{ width: '320px' }} ref={listRef}>
-            <FlightList sorted={sorted} selected={selected} origin={origin} currency={currency} onSelect={handleSelect} />
-          </div>
+          {!isMobile && (
+            <div className="flex-shrink-0 overflow-y-auto p-3 pl-1.5" style={{ width: '320px' }} ref={listRef}>
+              <FlightList sorted={sorted} selected={selected} origin={origin} currency={currency} onSelect={handleSelect} />
+            </div>
+          )}
 
           {/* Mobile FAB — toggle panel */}
-          {sorted.length > 0 && (
+          {isMobile && sorted.length > 0 && (
             <button
               onClick={() => setShowPanel(true)}
-              className="md:hidden absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-white shadow-lg"
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-white"
               style={{ background: 'var(--color-ink)', boxShadow: '0 4px 20px rgba(44,31,20,0.35)', zIndex: 1000 }}
             >
               <span>✈️</span>
@@ -395,14 +405,16 @@ function DiscoverDestination({
             </button>
           )}
 
-          {/* Mobile bottom sheet */}
-          <div
-            className="md:hidden fixed inset-0 z-40 transition-opacity duration-300"
-            style={{ background: 'rgba(0,0,0,0.4)', opacity: showPanel ? 1 : 0, pointerEvents: showPanel ? 'auto' : 'none' }}
-            onClick={() => setShowPanel(false)}
-          />
-          <div
-            className="md:hidden fixed left-0 right-0 bottom-0 z-50 flex flex-col"
+          {/* Mobile bottom sheet backdrop */}
+          {isMobile && (
+            <div
+              className="fixed inset-0 transition-opacity duration-300"
+              style={{ background: 'rgba(0,0,0,0.4)', opacity: showPanel ? 1 : 0, pointerEvents: showPanel ? 'auto' : 'none', zIndex: 900 }}
+              onClick={() => setShowPanel(false)}
+            />
+          )}
+          {isMobile && <div
+            className="fixed left-0 right-0 bottom-0 flex flex-col"
             style={{
               height: '80dvh',
               background: 'var(--color-bg)',
@@ -410,6 +422,7 @@ function DiscoverDestination({
               boxShadow: '0 -8px 40px rgba(44,31,20,0.18)',
               transform: showPanel ? 'translateY(0)' : 'translateY(100%)',
               transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+              zIndex: 1000,
             }}
           >
             {/* Sheet header */}
@@ -463,7 +476,7 @@ function DiscoverDestination({
             <div className="flex-1 overflow-y-auto p-3" ref={listRef}>
               <FlightList sorted={sorted} selected={selected} origin={origin} currency={currency} onSelect={(iata) => { handleSelect(iata); setShowPanel(false); }} />
             </div>
-          </div>
+          </div>}
 
         </div>
       )}
