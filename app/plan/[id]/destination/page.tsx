@@ -1,71 +1,31 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { format, parseISO, addDays } from 'date-fns';
+import dynamic from 'next/dynamic';
 import Nav from '@/components/Nav';
+import type { FlightDestination } from '@/components/FlightMap';
 
-function DestinationContent() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const planId = params.id as string;
-  const mode = searchParams.get('mode') ?? 'known';
-  const start = searchParams.get('start') ?? '';
-  const nights = Number(searchParams.get('nights') ?? 1);
+const FlightMap = dynamic(() => import('@/components/FlightMap'), { ssr: false });
 
+// ─── Known mode ──────────────────────────────────────────────────────────────
+
+function KnownDestination({
+  planId, bookParams, startDate, endDate, nights, checkin, checkout,
+}: {
+  planId: string; bookParams: string; startDate: Date | null; endDate: Date | null;
+  nights: number; checkin: string; checkout: string;
+}) {
   const [destination, setDestination] = useState('');
-
-  const isKnown = mode === 'known';
-  const bookParams = `start=${start}&nights=${nights}`;
-
-  const startDate = start ? parseISO(start) : null;
-  const endDate = startDate ? addDays(startDate, nights - 1) : null;
-
-  // Booking.com deep-link with pre-filled dates and destination
-  const checkin = startDate ? format(startDate, 'yyyy-MM-dd') : '';
-  const checkout = endDate ? format(addDays(endDate, 1), 'yyyy-MM-dd') : '';
   const bookingUrl = destination.trim()
     ? `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination.trim())}&checkin=${checkin}&checkout=${checkout}&group_adults=2&no_rooms=1`
     : null;
-
-  if (!isKnown) {
-    return (
-      <main className="dot-bg min-h-screen flex items-center justify-center p-4 py-12">
-        <Nav />
-        <div className="w-full max-w-md">
-          <div className="fade-up fade-up-1 text-center mb-8">
-            <a href={`/plan/${planId}/book?${bookParams}`}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-5"
-              style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.18)', textDecoration: 'none' }}>
-              <span style={{ fontSize: '0.7rem' }}>✈️</span>
-              <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>← Back</span>
-            </a>
-            <div className="text-5xl mb-4">🧭</div>
-            <h1 className="font-display font-bold" style={{ fontSize: '2.2rem', lineHeight: 1.1, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}>
-              Let&apos;s find your destination
-            </h1>
-            {startDate && endDate && (
-              <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-coral)' }}>
-                {format(startDate, 'd MMM')} – {format(endDate, 'd MMM yyyy')} · {nights} night{nights !== 1 ? 's' : ''}
-              </p>
-            )}
-          </div>
-          <div className="fade-up fade-up-2 card p-8 text-center" style={{ boxShadow: '0 8px 32px rgba(44,31,20,0.08)' }}>
-            <p className="font-display font-bold text-xl mb-2" style={{ color: 'var(--color-ink)' }}>Coming soon</p>
-            <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-              An interactive flight map showing prices and weather — we&apos;re building it now.
-            </p>
-          </div>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="dot-bg min-h-screen p-4 py-12">
       <Nav />
       <div className="w-full max-w-lg mx-auto">
-
         <div className="fade-up fade-up-1 text-center mb-8">
           <a href={`/plan/${planId}/book?${bookParams}`}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-5"
@@ -73,7 +33,6 @@ function DestinationContent() {
             <span style={{ fontSize: '0.7rem' }}>✈️</span>
             <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>← Back</span>
           </a>
-
           <div className="text-5xl mb-4">🗺️</div>
           <h1 className="font-display font-bold" style={{ fontSize: '2.2rem', lineHeight: 1.1, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}>
             Where are you headed?
@@ -84,12 +43,8 @@ function DestinationContent() {
             </p>
           )}
         </div>
-
-        {/* Destination search */}
         <div className="fade-up fade-up-2 card p-6" style={{ boxShadow: '0 8px 32px rgba(44,31,20,0.08)' }}>
-          <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>
-            Destination
-          </label>
+          <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Destination</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -104,12 +59,11 @@ function DestinationContent() {
               onClick={e => { if (!bookingUrl) e.preventDefault(); }}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 rounded-xl font-display font-semibold text-white transition-all duration-150 flex items-center"
+              className="px-5 rounded-xl font-display font-semibold text-white transition-all duration-150 flex items-center flex-shrink-0"
               style={{
                 background: bookingUrl ? 'var(--color-coral)' : 'var(--color-border)',
                 boxShadow: bookingUrl ? '0 3px 10px rgba(244,98,31,0.3)' : 'none',
                 textDecoration: 'none',
-                cursor: bookingUrl ? 'pointer' : 'default',
                 opacity: bookingUrl ? 1 : 0.5,
               }}
             >
@@ -120,18 +74,274 @@ function DestinationContent() {
             Your dates ({checkin} → {checkout}) will be pre-filled on Booking.com.
           </p>
         </div>
-
-        {/* Booking.com branding note */}
-        {bookingUrl && (
-          <div className="fade-up fade-up-3 mt-4 text-center">
-            <p className="text-xs" style={{ color: 'var(--color-faint)' }}>
-              Opens Booking.com in a new tab · results for <span className="font-semibold">{destination}</span>
-            </p>
-          </div>
-        )}
-
       </div>
     </main>
+  );
+}
+
+// ─── Discover mode ────────────────────────────────────────────────────────────
+
+type SortKey = 'price_asc' | 'price_desc';
+
+function DiscoverDestination({
+  planId, bookParams, startDate, endDate, nights,
+}: {
+  planId: string; bookParams: string; startDate: Date | null; endDate: Date | null; nights: number;
+}) {
+  const [origin, setOrigin] = useState('');
+  const [originInput, setOriginInput] = useState('');
+  const [destinations, setDestinations] = useState<FlightDestination[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [selected, setSelected] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortKey>('price_asc');
+  const [maxPrice, setMaxPrice] = useState<number>(9999);
+  const [maxPriceMax, setMaxPriceMax] = useState<number>(9999);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const departureDate = startDate ? format(startDate, 'yyyy-MM-dd') : '';
+  const duration = nights.toString();
+
+  async function search() {
+    if (!origin || !departureDate) return;
+    setLoading(true); setError(''); setDestinations([]); setSelected(null);
+    try {
+      const res = await fetch(`/api/flight-destinations?origin=${origin}&departureDate=${departureDate}&duration=${duration}`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? 'Failed to fetch');
+      }
+      const data: FlightDestination[] = await res.json();
+      if (data.length === 0) { setError('No flights found from this origin. Try a different airport code.'); setLoading(false); return; }
+      const prices = data.map(d => d.price);
+      const highest = Math.max(...prices);
+      setMaxPriceMax(highest);
+      setMaxPrice(highest);
+      setDestinations(data);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleSelect(iata: string) {
+    setSelected(iata);
+    // Scroll the selected item into view in the list
+    setTimeout(() => {
+      const el = listRef.current?.querySelector(`[data-iata="${iata}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+  }
+
+  const sorted = [...destinations]
+    .filter(d => d.price <= maxPrice)
+    .sort((a, b) => sort === 'price_asc' ? a.price - b.price : b.price - a.price);
+
+  const currency = '£'; // Could be made dynamic
+
+  return (
+    <main className="dot-bg min-h-screen flex flex-col" style={{ height: '100dvh' }}>
+      <Nav />
+
+      {/* ── Top bar ── */}
+      <div className="flex-shrink-0 px-4 pt-6 pb-3 max-w-none">
+        <div className="flex items-center gap-3 flex-wrap mb-3">
+          <a href={`/plan/${planId}/book?${bookParams}`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+            style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.18)', textDecoration: 'none' }}>
+            <span style={{ fontSize: '0.7rem' }}>✈️</span>
+            <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>← Back</span>
+          </a>
+          <h1 className="font-display font-bold text-xl" style={{ color: 'var(--color-ink)', letterSpacing: '-0.02em' }}>
+            Find your destination
+          </h1>
+          {startDate && endDate && (
+            <span className="label-tag px-2.5 py-1 rounded-full" style={{ background: 'var(--color-coral-light)', color: 'var(--color-coral)' }}>
+              {format(startDate, 'd MMM')} – {format(endDate, 'd MMM yyyy')} · {nights}n
+            </span>
+          )}
+        </div>
+
+        {/* Search bar */}
+        <div className="flex gap-2 items-center">
+          <div className="flex items-center gap-2 card px-3 py-2 flex-1 max-w-xs" style={{ boxShadow: 'none' }}>
+            <span className="label-tag flex-shrink-0" style={{ color: 'var(--color-faint)' }}>Flying from</span>
+            <input
+              type="text"
+              placeholder="e.g. LHR, LGW, JFK…"
+              value={originInput}
+              onChange={e => setOriginInput(e.target.value.toUpperCase())}
+              onKeyDown={e => { if (e.key === 'Enter') { setOrigin(originInput); setTimeout(search, 0); } }}
+              className="flex-1 bg-transparent outline-none text-sm font-semibold"
+              style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-nunito)', minWidth: 0 }}
+              maxLength={3}
+            />
+          </div>
+          <button
+            onClick={() => { setOrigin(originInput); setTimeout(search, 0); }}
+            disabled={loading || !originInput || !departureDate}
+            className="px-5 py-2.5 rounded-xl font-display font-semibold text-white transition-all duration-150 disabled:opacity-40 flex-shrink-0"
+            style={{ background: 'var(--color-coral)', boxShadow: '0 3px 10px rgba(244,98,31,0.3)' }}
+          >
+            {loading ? 'Searching…' : 'Search'}
+          </button>
+
+          {destinations.length > 0 && (
+            <>
+              <select
+                value={sort}
+                onChange={e => setSort(e.target.value as SortKey)}
+                className="card px-3 py-2.5 text-sm font-semibold outline-none cursor-pointer"
+                style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-nunito)', boxShadow: 'none', border: '1.5px solid var(--color-border)' }}
+              >
+                <option value="price_asc">Price: Low → High</option>
+                <option value="price_desc">Price: High → Low</option>
+              </select>
+              <div className="flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', flexShrink: 0 }}>
+                <span className="label-tag" style={{ color: 'var(--color-faint)', whiteSpace: 'nowrap' }}>Max {currency}{maxPrice === maxPriceMax ? '∞' : maxPrice}</span>
+                <input
+                  type="range" min={0} max={maxPriceMax} step={10}
+                  value={maxPrice}
+                  onChange={e => setMaxPrice(Number(e.target.value))}
+                  style={{ width: '80px', accentColor: 'var(--color-coral)' }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {error && <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-cantdo)' }}>{error}</p>}
+      </div>
+
+      {/* ── Main split area ── */}
+      {destinations.length === 0 && !loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center px-6">
+            <div className="text-6xl mb-4">🧭</div>
+            <p className="font-display font-bold text-xl mb-2" style={{ color: 'var(--color-ink)' }}>Enter your departure airport</p>
+            <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+              Use the IATA code — e.g. <span style={{ fontWeight: 600 }}>LHR</span> for London Heathrow,{' '}
+              <span style={{ fontWeight: 600 }}>JFK</span> for New York.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex gap-0 overflow-hidden">
+
+          {/* Map */}
+          <div className="flex-1 p-3 pr-1.5" style={{ minWidth: 0 }}>
+            <div style={{ height: '100%', borderRadius: '16px', overflow: 'hidden', border: '1.5px solid var(--color-border)' }}>
+              <FlightMap
+                destinations={sorted}
+                selected={selected}
+                onSelect={handleSelect}
+                currency={currency}
+              />
+            </div>
+          </div>
+
+          {/* Flight list */}
+          <div className="flex-shrink-0 overflow-y-auto p-3 pl-1.5" style={{ width: '320px' }} ref={listRef}>
+            <div className="space-y-2">
+              {sorted.length === 0 && (
+                <p className="text-sm text-center py-8" style={{ color: 'var(--color-muted)' }}>No results match your filter.</p>
+              )}
+              {sorted.map((dest, i) => {
+                const isSelected = dest.destination === selected;
+                const flightsUrl = `https://www.google.com/flights#flt=${origin}.${dest.destination}.${dest.departureDate}*${dest.destination}.${origin}.${dest.returnDate};tt:o`;
+                return (
+                  <div
+                    key={dest.destination}
+                    data-iata={dest.destination}
+                    onClick={() => handleSelect(dest.destination)}
+                    className="card px-4 py-3 cursor-pointer transition-all duration-150"
+                    style={{
+                      border: isSelected ? '1.5px solid var(--color-coral)' : '1.5px solid var(--color-border)',
+                      boxShadow: isSelected ? '0 4px 16px rgba(244,98,31,0.15)' : 'none',
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="label-tag flex-shrink-0" style={{ color: 'var(--color-faint)', minWidth: '1.4rem' }}>#{i + 1}</span>
+                        <div className="min-w-0">
+                          <p className="font-display font-bold text-sm truncate" style={{ color: 'var(--color-ink)' }}>{dest.city}</p>
+                          <p className="text-xs truncate" style={{ color: 'var(--color-muted)' }}>{dest.country} · {dest.destination}</p>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-display font-bold text-base" style={{ color: 'var(--color-coral)' }}>{currency}{dest.price.toFixed(0)}</p>
+                        <p className="text-xs" style={{ color: 'var(--color-faint)' }}>per person</p>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <div className="mt-3 pt-3 flex gap-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+                        <a
+                          href={flightsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          className="flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-all duration-150"
+                          style={{ background: 'var(--color-coral)', color: '#fff', textDecoration: 'none' }}
+                        >
+                          View flights →
+                        </a>
+                        <a
+                          href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(dest.city)}&checkin=${dest.departureDate}&checkout=${dest.returnDate}&group_adults=2`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          className="flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-all duration-150"
+                          style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', textDecoration: 'none' }}
+                        >
+                          Hotels
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+        </div>
+      )}
+    </main>
+  );
+}
+
+// ─── Root component ───────────────────────────────────────────────────────────
+
+function DestinationContent() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const planId = params.id as string;
+  const mode = searchParams.get('mode') ?? 'known';
+  const start = searchParams.get('start') ?? '';
+  const nights = Number(searchParams.get('nights') ?? 1);
+
+  const bookParams = `start=${start}&nights=${nights}`;
+  const startDate = start ? parseISO(start) : null;
+  const endDate = startDate ? addDays(startDate, nights - 1) : null;
+  const checkin = startDate ? format(startDate, 'yyyy-MM-dd') : '';
+  const checkout = endDate ? format(addDays(endDate, 1), 'yyyy-MM-dd') : '';
+
+  if (mode === 'known') {
+    return (
+      <KnownDestination
+        planId={planId} bookParams={bookParams}
+        startDate={startDate} endDate={endDate}
+        nights={nights} checkin={checkin} checkout={checkout}
+      />
+    );
+  }
+
+  return (
+    <DiscoverDestination
+      planId={planId} bookParams={bookParams}
+      startDate={startDate} endDate={endDate}
+      nights={nights}
+    />
   );
 }
 
