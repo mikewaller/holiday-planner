@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Nunito } from "next/font/google";
 import "./globals.css";
 
@@ -18,6 +18,12 @@ const nunito = Nunito({
 export const metadata: Metadata = {
   title: "Hatch a Plan",
   description: "Hatch the perfect trip together — find dates that work for everyone",
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

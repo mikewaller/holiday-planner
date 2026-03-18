@@ -392,8 +392,8 @@ function DiscoverDestination({
           {isMobile && sorted.length > 0 && (
             <button
               onClick={() => setShowPanel(true)}
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-white"
-              style={{ background: 'var(--color-ink)', boxShadow: '0 4px 20px rgba(44,31,20,0.35)', zIndex: 1000 }}
+              className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-white"
+              style={{ background: 'var(--color-ink)', boxShadow: '0 4px 20px rgba(44,31,20,0.35)', zIndex: 1000, bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
             >
               <span>✈️</span>
               <span>{sorted.length} destination{sorted.length !== 1 ? 's' : ''}</span>
@@ -419,11 +419,14 @@ function DiscoverDestination({
               transform: showPanel ? `translateY(${Math.max(0, dragY)}px)` : 'translateY(100%)',
               transition: dragStartY.current !== null ? 'none' : 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
               zIndex: 1000,
+              paddingBottom: 'env(safe-area-inset-bottom)',
+              overscrollBehavior: 'none',
             }}
           >
             {/* Drag handle */}
             <div
               className="flex-shrink-0 flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
+              style={{ touchAction: 'none' }}
               onTouchStart={e => {
                 dragStartY.current = e.touches[0].clientY;
                 setDragY(0);
@@ -476,17 +479,17 @@ function DiscoverDestination({
                   </div>
                 </div>
                 <div className="flex gap-3 items-center">
-                  <div className="flex-1 flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)' }}>
+                  <div className="flex-1 flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', overflow: 'hidden', minWidth: 0 }}>
                     <span className="label-tag flex-shrink-0" style={{ color: 'var(--color-faint)' }}>Max {currency}{maxPrice === maxPriceMax ? '∞' : maxPrice}</span>
                     <input type="range" min={0} max={maxPriceMax} step={10} value={maxPrice}
                       onChange={e => setMaxPrice(Number(e.target.value))}
-                      className="flex-1" style={{ accentColor: 'var(--color-coral)' }} />
+                      style={{ accentColor: 'var(--color-coral)', flex: 1, minWidth: 0, width: 0 }} />
                   </div>
-                  <div className="flex-1 flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)' }}>
+                  <div className="flex-1 flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', overflow: 'hidden', minWidth: 0 }}>
                     <span className="label-tag flex-shrink-0" style={{ color: 'var(--color-faint)' }}>Min {minTempFilter}°C</span>
                     <input type="range" min={0} max={40} step={5} value={minTempFilter}
                       onChange={e => setMinTempFilter(Number(e.target.value))}
-                      className="flex-1" style={{ accentColor: 'var(--color-coral)' }} />
+                      style={{ accentColor: 'var(--color-coral)', flex: 1, minWidth: 0, width: 0 }} />
                   </div>
                 </div>
               </div>
