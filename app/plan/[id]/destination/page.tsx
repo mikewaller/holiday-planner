@@ -392,8 +392,8 @@ function DiscoverDestination({
           {isMobile && sorted.length > 0 && (
             <button
               onClick={() => setShowPanel(true)}
-              className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-white"
-              style={{ background: 'var(--color-ink)', boxShadow: '0 4px 20px rgba(44,31,20,0.35)', zIndex: 1000, bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
+              className="fixed left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full font-display font-semibold text-white"
+              style={{ background: 'var(--color-ink)', boxShadow: '0 4px 20px rgba(44,31,20,0.35)', zIndex: 999, bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
             >
               <span>✈️</span>
               <span>{sorted.length} destination{sorted.length !== 1 ? 's' : ''}</span>
