@@ -236,6 +236,27 @@ const CITY_CODES: Record<string, string> = {
   BKK: 'BKK', SIN: 'SIN', KUL: 'KUL', JKT: 'CGK', MNL: 'MNL',
 };
 
+// City groups for "Any airport" search options
+export const CITY_GROUPS: Record<string, { city: string; country: string; airports: string[] }> = {
+  LON: { city: 'London',        country: 'United Kingdom', airports: ['LHR', 'LGW', 'STN', 'LTN'] },
+  NYC: { city: 'New York',      country: 'USA',            airports: ['JFK', 'LGA', 'EWR'] },
+  PAR: { city: 'Paris',         country: 'France',         airports: ['CDG', 'ORY'] },
+  MIL: { city: 'Milan',         country: 'Italy',          airports: ['MXP'] },
+  ROM: { city: 'Rome',          country: 'Italy',          airports: ['FCO'] },
+  TYO: { city: 'Tokyo',         country: 'Japan',          airports: ['NRT', 'HND'] },
+  OSA: { city: 'Osaka',         country: 'Japan',          airports: ['KIX'] },
+  SEL: { city: 'Seoul',         country: 'South Korea',    airports: ['ICN', 'PUS'] },
+  BJS: { city: 'Beijing',       country: 'China',          airports: ['PEK', 'PKX'] },
+  SHA: { city: 'Shanghai',      country: 'China',          airports: ['PVG', 'SHA'] },
+  CHI: { city: 'Chicago',       country: 'USA',            airports: ['ORD', 'MDW'] },
+  WAS: { city: 'Washington DC', country: 'USA',            airports: ['DCA', 'IAD'] },
+  MOW: { city: 'Moscow',        country: 'Russia',         airports: ['SVO', 'LED'] },
+  IST: { city: 'Istanbul',      country: 'Turkey',         airports: ['IST', 'SAW'] },
+  BUE: { city: 'Buenos Aires',  country: 'Argentina',      airports: ['EZE'] },
+  RIO: { city: 'Rio de Janeiro', country: 'Brazil',       airports: ['GIG'] },
+  SAO: { city: 'São Paulo',     country: 'Brazil',         airports: ['GRU'] },
+};
+
 export function getAirport(iata: string): Airport | undefined {
   const code = iata.toUpperCase();
   // Try direct lookup first, then resolve city code to airport code

@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { format, parseISO, addDays } from 'date-fns';
 import dynamic from 'next/dynamic';
 import Nav from '@/components/Nav';
+import AirportAutocomplete from '@/components/AirportAutocomplete';
 import type { FlightDestination } from '@/components/FlightMap';
 
 const FlightMap = dynamic(() => import('@/components/FlightMap'), { ssr: false });
@@ -197,7 +198,6 @@ function DiscoverDestination({
   planId: string; bookParams: string; startDate: Date | null; endDate: Date | null; nights: number;
 }) {
   const [origin, setOrigin] = useState('');
-  const [originInput, setOriginInput] = useState('');
   const [destinations, setDestinations] = useState<FlightDestination[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -209,6 +209,8 @@ function DiscoverDestination({
   const [colorBy, setColorBy] = useState<'price' | 'temp'>('price');
   const [showPanel, setShowPanel] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [dragY, setDragY] = useState(0);
+  const dragStartY = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -221,11 +223,12 @@ function DiscoverDestination({
   const departureDate = startDate ? format(startDate, 'yyyy-MM-dd') : '';
   const duration = nights.toString();
 
-  async function search() {
-    if (!origin || !departureDate) return;
+  async function search(code?: string) {
+    const searchOrigin = code ?? origin;
+    if (!searchOrigin || !departureDate) return;
     setLoading(true); setError(''); setDestinations([]); setSelected(null);
     try {
-      const res = await fetch(`/api/flight-destinations?origin=${origin}&departureDate=${departureDate}&duration=${duration}`);
+      const res = await fetch(`/api/flight-destinations?origin=${searchOrigin}&departureDate=${departureDate}&duration=${duration}`);
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error ?? 'Failed to fetch');
@@ -292,23 +295,17 @@ function DiscoverDestination({
         </div>
 
         {/* Search bar */}
-        <div className="flex gap-2 items-center overflow-x-auto pb-0.5">
-          <div className="flex items-center gap-2 card px-3 py-2 flex-shrink-0" style={{ boxShadow: 'none', minWidth: '160px' }}>
-            <span className="label-tag flex-shrink-0" style={{ color: 'var(--color-faint)' }}>Flying from</span>
-            <input
-              type="text"
-              placeholder="LHR…"
-              value={originInput}
-              onChange={e => setOriginInput(e.target.value.toUpperCase())}
-              onKeyDown={e => { if (e.key === 'Enter') { setOrigin(originInput); setTimeout(search, 0); } }}
-              className="flex-1 bg-transparent outline-none text-sm font-semibold"
-              style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-nunito)', minWidth: 0, width: '3rem' }}
-              maxLength={3}
-            />
-          </div>
+        <div className="flex gap-2 items-center flex-wrap">
+          <AirportAutocomplete
+            value={origin}
+            onSelect={code => {
+              setOrigin(code);
+              if (code && departureDate) search(code);
+            }}
+          />
           <button
-            onClick={() => { setOrigin(originInput); setTimeout(search, 0); }}
-            disabled={loading || !originInput || !departureDate}
+            onClick={() => search()}
+            disabled={loading || !origin || !departureDate}
             className="px-5 py-2.5 rounded-xl font-display font-semibold text-white transition-all duration-150 disabled:opacity-40 flex-shrink-0"
             style={{ background: 'var(--color-coral)', boxShadow: '0 3px 10px rgba(244,98,31,0.3)' }}
           >
@@ -364,8 +361,7 @@ function DiscoverDestination({
             <div className="text-6xl mb-4">🧭</div>
             <p className="font-display font-bold text-xl mb-2" style={{ color: 'var(--color-ink)' }}>Enter your departure airport</p>
             <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-              Use the IATA code — e.g. <span style={{ fontWeight: 600 }}>LHR</span> for London Heathrow,{' '}
-              <span style={{ fontWeight: 600 }}>JFK</span> for New York.
+              Type a city or airport above — e.g. <span style={{ fontWeight: 600 }}>London</span> or <span style={{ fontWeight: 600 }}>LHR</span>
             </p>
           </div>
         </div>
@@ -420,13 +416,36 @@ function DiscoverDestination({
               background: 'var(--color-bg)',
               borderRadius: '20px 20px 0 0',
               boxShadow: '0 -8px 40px rgba(44,31,20,0.18)',
-              transform: showPanel ? 'translateY(0)' : 'translateY(100%)',
-              transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+              transform: showPanel ? `translateY(${Math.max(0, dragY)}px)` : 'translateY(100%)',
+              transition: dragStartY.current !== null ? 'none' : 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
               zIndex: 1000,
             }}
           >
+            {/* Drag handle */}
+            <div
+              className="flex-shrink-0 flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
+              onTouchStart={e => {
+                dragStartY.current = e.touches[0].clientY;
+                setDragY(0);
+              }}
+              onTouchMove={e => {
+                if (dragStartY.current === null) return;
+                const dy = e.touches[0].clientY - dragStartY.current;
+                setDragY(dy);
+              }}
+              onTouchEnd={() => {
+                if (dragY > 80) {
+                  setShowPanel(false);
+                }
+                dragStartY.current = null;
+                setDragY(0);
+              }}
+            >
+              <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'var(--color-border)' }} />
+            </div>
+
             {/* Sheet header */}
-            <div className="flex-shrink-0 px-4 pt-4 pb-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
+            <div className="flex-shrink-0 px-4 pt-2 pb-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
               <div className="flex items-center justify-between mb-3">
                 <p className="font-display font-bold text-base" style={{ color: 'var(--color-ink)' }}>
                   {sorted.length} destination{sorted.length !== 1 ? 's' : ''}
@@ -474,7 +493,7 @@ function DiscoverDestination({
             </div>
             {/* Scrollable list */}
             <div className="flex-1 overflow-y-auto p-3" ref={listRef}>
-              <FlightList sorted={sorted} selected={selected} origin={origin} currency={currency} onSelect={(iata) => { handleSelect(iata); setShowPanel(false); }} />
+              <FlightList sorted={sorted} selected={selected} origin={origin} currency={currency} onSelect={handleSelect} />
             </div>
           </div>}
 
