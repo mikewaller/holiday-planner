@@ -239,6 +239,7 @@ function DiscoverDestination({
 
   function handleSelect(iata: string) {
     setSelected(iata);
+    setShowPanel(true);
     setTimeout(() => {
       const el = listRef.current?.querySelector(`[data-iata="${iata}"]`);
       el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
