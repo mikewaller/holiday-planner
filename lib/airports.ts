@@ -227,6 +227,17 @@ export const AIRPORTS: Record<string, Airport> = {
   CCS: { city: 'Caracas', country: 'Venezuela', lat: 10.601, lng: -66.991 },
 };
 
+// City-level IATA codes (Travelpayouts returns these instead of airport codes)
+const CITY_CODES: Record<string, string> = {
+  LON: 'LHR', NYC: 'JFK', PAR: 'CDG', MIL: 'MXP', ROM: 'FCO',
+  BUH: 'OTP', BJS: 'PEK', OSA: 'KIX', TYO: 'NRT', SEL: 'ICN',
+  SHA: 'PVG', CHI: 'ORD', WAS: 'IAD', YTO: 'YYZ', BUE: 'EZE',
+  RIO: 'GIG', SAO: 'GRU', MOW: 'SVO', SPB: 'LED', IST: 'IST',
+  BKK: 'BKK', SIN: 'SIN', KUL: 'KUL', JKT: 'CGK', MNL: 'MNL',
+};
+
 export function getAirport(iata: string): Airport | undefined {
-  return AIRPORTS[iata.toUpperCase()];
+  const code = iata.toUpperCase();
+  // Try direct lookup first, then resolve city code to airport code
+  return AIRPORTS[code] ?? AIRPORTS[CITY_CODES[code] ?? ''];
 }

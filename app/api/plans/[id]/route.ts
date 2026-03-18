@@ -53,12 +53,27 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { creator_token, is_locked } = await req.json();
+  const body = await req.json();
+  const { creator_token } = body;
 
   const [plan] = await sql<PlanRow[]>`SELECT * FROM plans WHERE id = ${id}`;
   if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
   if (plan.creator_token !== creator_token) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
-  await sql`UPDATE plans SET is_locked = ${is_locked ? 1 : 0} WHERE id = ${id}`;
+  if ('is_locked' in body) {
+    await sql`UPDATE plans SET is_locked = ${body.is_locked ? 1 : 0} WHERE id = ${id}`;
+  }
+
+  if (body.window_start && body.window_end && body.min_duration && body.max_duration) {
+    await sql`
+      UPDATE plans
+      SET window_start = ${body.window_start},
+          window_end   = ${body.window_end},
+          min_duration = ${body.min_duration},
+          max_duration = ${body.max_duration}
+      WHERE id = ${id}
+    `;
+  }
+
   return NextResponse.json({ success: true });
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { format, parseISO, addDays } from 'date-fns';
 import dynamic from 'next/dynamic';
@@ -8,6 +8,28 @@ import Nav from '@/components/Nav';
 import type { FlightDestination } from '@/components/FlightMap';
 
 const FlightMap = dynamic(() => import('@/components/FlightMap'), { ssr: false });
+
+// ─── Climate helpers ──────────────────────────────────────────────────────────
+
+function climateEmoji(avgHigh: number, rainyDays: number): string {
+  if (avgHigh >= 30 && rainyDays <= 5) return '☀️';
+  if (avgHigh >= 25 && rainyDays <= 8) return '🌤️';
+  if (avgHigh >= 20) return '⛅';
+  if (avgHigh < 10) return '❄️';
+  if (rainyDays > 12) return '🌧️';
+  return '🌦️';
+}
+
+function climateLabel(avgHigh: number, rainyDays: number): string {
+  if (avgHigh >= 35) return 'Very hot';
+  if (avgHigh >= 30 && rainyDays <= 5) return 'Hot & dry';
+  if (avgHigh >= 25 && rainyDays <= 8) return 'Warm & sunny';
+  if (avgHigh >= 25) return 'Warm';
+  if (avgHigh >= 20) return 'Mild';
+  if (avgHigh >= 15) return 'Cool';
+  if (avgHigh >= 10) return 'Cold';
+  return 'Very cold';
+}
 
 // ─── Known mode ──────────────────────────────────────────────────────────────
 
@@ -81,7 +103,7 @@ function KnownDestination({
 
 // ─── Discover mode ────────────────────────────────────────────────────────────
 
-type SortKey = 'price_asc' | 'price_desc';
+type SortKey = 'price_asc' | 'price_desc' | 'temp_asc' | 'temp_desc';
 
 function DiscoverDestination({
   planId, bookParams, startDate, endDate, nights,
@@ -97,6 +119,8 @@ function DiscoverDestination({
   const [sort, setSort] = useState<SortKey>('price_asc');
   const [maxPrice, setMaxPrice] = useState<number>(9999);
   const [maxPriceMax, setMaxPriceMax] = useState<number>(9999);
+  const [minTempFilter, setMinTempFilter] = useState<number>(0);
+  const [colorBy, setColorBy] = useState<'price' | 'temp'>('price');
   const listRef = useRef<HTMLDivElement>(null);
 
   const departureDate = startDate ? format(startDate, 'yyyy-MM-dd') : '';
@@ -117,6 +141,7 @@ function DiscoverDestination({
       const highest = Math.max(...prices);
       setMaxPriceMax(highest);
       setMaxPrice(highest);
+      setMinTempFilter(0);
       setDestinations(data);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
@@ -127,7 +152,6 @@ function DiscoverDestination({
 
   function handleSelect(iata: string) {
     setSelected(iata);
-    // Scroll the selected item into view in the list
     setTimeout(() => {
       const el = listRef.current?.querySelector(`[data-iata="${iata}"]`);
       el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -136,7 +160,15 @@ function DiscoverDestination({
 
   const sorted = [...destinations]
     .filter(d => d.price <= maxPrice)
-    .sort((a, b) => sort === 'price_asc' ? a.price - b.price : b.price - a.price);
+    .filter(d => !d.climate || d.climate.avgHigh >= minTempFilter)
+    .sort((a, b) => {
+      if (sort === 'price_asc') return a.price - b.price;
+      if (sort === 'price_desc') return b.price - a.price;
+      const aTemp = a.climate?.avgHigh ?? 0;
+      const bTemp = b.climate?.avgHigh ?? 0;
+      if (sort === 'temp_asc') return aTemp - bTemp;
+      return bTemp - aTemp; // temp_desc
+    });
 
   const currency = '£'; // Could be made dynamic
 
@@ -197,6 +229,8 @@ function DiscoverDestination({
               >
                 <option value="price_asc">Price: Low → High</option>
                 <option value="price_desc">Price: High → Low</option>
+                <option value="temp_desc">Hottest first</option>
+                <option value="temp_asc">Coolest first</option>
               </select>
               <div className="flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', flexShrink: 0 }}>
                 <span className="label-tag" style={{ color: 'var(--color-faint)', whiteSpace: 'nowrap' }}>Max {currency}{maxPrice === maxPriceMax ? '∞' : maxPrice}</span>
@@ -206,6 +240,30 @@ function DiscoverDestination({
                   onChange={e => setMaxPrice(Number(e.target.value))}
                   style={{ width: '80px', accentColor: 'var(--color-coral)' }}
                 />
+              </div>
+              <div className="flex items-center gap-2 card px-3 py-2" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', flexShrink: 0 }}>
+                <span className="label-tag" style={{ color: 'var(--color-faint)', whiteSpace: 'nowrap' }}>Min {minTempFilter}°C</span>
+                <input
+                  type="range" min={0} max={40} step={5}
+                  value={minTempFilter}
+                  onChange={e => setMinTempFilter(Number(e.target.value))}
+                  style={{ width: '80px', accentColor: 'var(--color-coral)' }}
+                />
+              </div>
+              <div className="flex items-center gap-1 card px-1 py-1" style={{ boxShadow: 'none', border: '1.5px solid var(--color-border)', flexShrink: 0, borderRadius: '10px' }}>
+                {(['price', 'temp'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setColorBy(mode)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
+                    style={{
+                      background: colorBy === mode ? 'var(--color-ink)' : 'transparent',
+                      color: colorBy === mode ? '#fff' : 'var(--color-muted)',
+                    }}
+                  >
+                    {mode === 'price' ? '💰 Price' : '🌡️ Temp'}
+                  </button>
+                ))}
               </div>
             </>
           )}
@@ -237,6 +295,7 @@ function DiscoverDestination({
                 selected={selected}
                 onSelect={handleSelect}
                 currency={currency}
+                colorBy={colorBy}
               />
             </div>
           </div>
@@ -271,31 +330,54 @@ function DiscoverDestination({
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="font-display font-bold text-base" style={{ color: 'var(--color-coral)' }}>{currency}{dest.price.toFixed(0)}</p>
-                        <p className="text-xs" style={{ color: 'var(--color-faint)' }}>per person</p>
+                        {dest.climate ? (
+                          <p className="text-xs font-medium" style={{ color: 'var(--color-muted)' }}>
+                            {climateEmoji(dest.climate.avgHigh, dest.climate.rainyDays)} ~{dest.climate.avgHigh}°C
+                          </p>
+                        ) : (
+                          <p className="text-xs" style={{ color: 'var(--color-faint)' }}>per person</p>
+                        )}
                       </div>
                     </div>
                     {isSelected && (
-                      <div className="mt-3 pt-3 flex gap-2" style={{ borderTop: '1px solid var(--color-border)' }}>
-                        <a
-                          href={flightsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-all duration-150"
-                          style={{ background: 'var(--color-coral)', color: '#fff', textDecoration: 'none' }}
-                        >
-                          View flights →
-                        </a>
-                        <a
-                          href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(dest.city)}&checkin=${dest.departureDate}&checkout=${dest.returnDate}&group_adults=2`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-all duration-150"
-                          style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', textDecoration: 'none' }}
-                        >
-                          Hotels
-                        </a>
+                      <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+                        {/* Climate row */}
+                        {dest.climate && (
+                          <div className="mb-3 px-1 flex items-center gap-3">
+                            <span style={{ fontSize: '1.3rem' }}>{climateEmoji(dest.climate.avgHigh, dest.climate.rainyDays)}</span>
+                            <div>
+                              <p className="text-xs font-semibold" style={{ color: 'var(--color-ink)' }}>
+                                {climateLabel(dest.climate.avgHigh, dest.climate.rainyDays)} · {dest.climate.avgLow}–{dest.climate.avgHigh}°C
+                              </p>
+                              <p className="text-xs" style={{ color: 'var(--color-faint)' }}>
+                                ~{dest.climate.rainyDays} rainy day{dest.climate.rainyDays !== 1 ? 's' : ''} · 10-year avg
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        {/* Action buttons */}
+                        <div className="flex gap-2">
+                          <a
+                            href={flightsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-all duration-150"
+                            style={{ background: 'var(--color-coral)', color: '#fff', textDecoration: 'none' }}
+                          >
+                            View flights →
+                          </a>
+                          <a
+                            href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(dest.city)}&checkin=${dest.departureDate}&checkout=${dest.returnDate}&group_adults=2`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-all duration-150"
+                            style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', textDecoration: 'none' }}
+                          >
+                            Hotels
+                          </a>
+                        </div>
                       </div>
                     )}
                   </div>
