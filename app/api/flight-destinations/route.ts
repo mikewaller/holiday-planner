@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addDays, format, parseISO } from 'date-fns';
-import { getAirport } from '@/lib/airports';
+import { getAirport, resolveAirportCode } from '@/lib/airports';
 import { climateForRange } from '@/lib/climate';
 
 export async function GET(req: NextRequest) {
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
           airline: flight.airline,
           departureDate: depDate,
           returnDate: retDate,
-          climate: climateForRange(iata, depDate, retDate),
+          climate: climateForRange(resolveAirportCode(iata), depDate, retDate),
         };
       })
       .filter(Boolean);

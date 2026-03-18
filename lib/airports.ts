@@ -241,3 +241,9 @@ export function getAirport(iata: string): Airport | undefined {
   // Try direct lookup first, then resolve city code to airport code
   return AIRPORTS[code] ?? AIRPORTS[CITY_CODES[code] ?? ''];
 }
+
+/** Resolves a city code (e.g. PAR) to its airport code (e.g. CDG), or returns the input unchanged. */
+export function resolveAirportCode(iata: string): string {
+  const code = iata.toUpperCase();
+  return CITY_CODES[code] ?? code;
+}
