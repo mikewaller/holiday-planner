@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Nav from '@/components/Nav';
+import { createClient } from '@/lib/supabase/client';
 import { addDays, format, parseISO, eachDayOfInterval } from 'date-fns';
 
 type Status = 'free' | 'cant_do' | 'preferred';
@@ -38,6 +39,8 @@ export default function PlanPage() {
   const [nameInput, setNameInput] = useState('');
   const [nameError, setNameError] = useState('');
   const [joiningName, setJoiningName] = useState(false);
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [copied, setCopied] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
@@ -59,6 +62,9 @@ export default function PlanPage() {
     const stored = localStorage.getItem(`participant_${planId}`);
     if (stored) setMe(JSON.parse(stored));
   }, [planId]);
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data: { user } }) => setAuthed(!!user));
+  }, []);
 
   async function joinPlan() {
     if (!nameInput.trim()) return;
@@ -240,15 +246,17 @@ export default function PlanPage() {
           </button>
         </div>
 
-        {/* ── Sign-up info ────────────────────────────────── */}
-        <div className="fade-up fade-up-2 px-4 py-3 rounded-xl flex items-start gap-3" style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.15)' }}>
-          <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: '0.05rem' }}>💡</span>
-          <p className="text-sm" style={{ color: 'var(--color-muted)', lineHeight: 1.5 }}>
-            No account needed — anyone with this link can join and mark their availability.{' '}
-            <a href="/login" style={{ color: 'var(--color-coral)', textDecoration: 'none', fontWeight: 600 }}>Sign in</a>
-            {' '}to keep all your created trips in one place. This plan will always be accessible at this URL.
-          </p>
-        </div>
+        {/* ── Sign-up info (unauthenticated creators only) ─── */}
+        {!authed && resolvedCreatorToken && (
+          <div className="fade-up fade-up-2 px-4 py-3 rounded-xl flex items-start gap-3" style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.15)' }}>
+            <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: '0.05rem' }}>💡</span>
+            <p className="text-sm" style={{ color: 'var(--color-muted)', lineHeight: 1.5 }}>
+              No account needed — anyone with this link can join and mark their availability.{' '}
+              <a href="/login" style={{ color: 'var(--color-coral)', textDecoration: 'none', fontWeight: 600 }}>Sign in</a>
+              {' '}to keep all your created trips in one place. This plan will always be accessible at this URL.
+            </p>
+          </div>
+        )}
 
         {/* ── Join / identity ─────────────────────────────── */}
         {!me ? (
@@ -262,6 +270,7 @@ export default function PlanPage() {
               </button>
             </div>
             {nameError && <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-cantdo)' }}>{nameError}</p>}
+            {showNamePrompt && !nameError && <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-coral)' }}>Enter your name above to start marking your dates 👆</p>}
           </div>
         ) : (
           <div className="fade-up fade-up-2 flex items-center justify-between px-4 py-3 card">
@@ -342,14 +351,21 @@ export default function PlanPage() {
                     return (
                       <div
                         key={date}
-                        onClick={() => isClickable && toggleDate(date)}
+                        onClick={() => {
+                          if (!me && !plan.is_locked) {
+                            setShowNamePrompt(true);
+                            setTimeout(() => setShowNamePrompt(false), 3000);
+                          } else if (isClickable) {
+                            toggleDate(date);
+                          }
+                        }}
                         onMouseEnter={e => {
                           setHoveredDate(date);
                           const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
                           setTooltipPos({ top: rect.top, left: rect.left + rect.width / 2 });
                         }}
                         onMouseLeave={() => { setHoveredDate(null); setTooltipPos(null); }}
-                        className={`relative aspect-square flex flex-col items-center justify-center text-xs font-semibold transition-all duration-150 ${isPopping ? 'cell-pop' : ''} ${isClickable ? 'cursor-pointer' : ''}`}
+                        className={`relative aspect-square flex flex-col items-center justify-center text-xs font-semibold transition-all duration-150 ${isPopping ? 'cell-pop' : ''} ${!plan.is_locked ? 'cursor-pointer' : ''}`}
                         style={{
                           background: cfg ? cfg.cellBg : 'var(--color-bg)',
                           color: cfg ? cfg.cellText : 'var(--color-muted)',

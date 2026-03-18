@@ -1,0 +1,205 @@
+'use client';
+
+import { Suspense, useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { format, parseISO, addDays } from 'date-fns';
+import Nav from '@/components/Nav';
+
+interface Participant { id: string; name: string; }
+interface Availability { participant_id: string; date: string; status: string; }
+interface Plan { id: string; name: string; }
+
+function ItineraryContent() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const planId = params.id as string;
+  const start = searchParams.get('start') ?? '';
+  const nights = Number(searchParams.get('nights') ?? 1);
+
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [availability, setAvailability] = useState<Availability[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/plans/${planId}`).then(r => r.json()).then(data => {
+      setPlan(data.plan);
+      setParticipants(data.participants);
+      setAvailability(data.availability);
+    });
+  }, [planId]);
+
+  if (!plan || !start) return (
+    <main className="dot-bg min-h-screen flex items-center justify-center">
+      <p className="font-display text-2xl font-semibold" style={{ color: 'var(--color-muted)' }}>Loading…</p>
+    </main>
+  );
+
+  const startDate = parseISO(start);
+  const endDate = addDays(startDate, nights - 1);
+  const rangeDates = Array.from({ length: nights }, (_, i) =>
+    format(addDays(startDate, i), 'yyyy-MM-dd')
+  );
+
+  const whoCanGo = participants.filter(p =>
+    !rangeDates.some(date =>
+      availability.find(a => a.participant_id === p.id && a.date === date)?.status === 'cant_do'
+    )
+  );
+
+  const bookParams = `start=${start}&nights=${nights}`;
+
+  // Google Calendar URL (end date is exclusive = day after last night)
+  const gcalEnd = format(addDays(endDate, 1), 'yyyyMMdd');
+  const gcalStart = format(startDate, 'yyyyMMdd');
+  const gcalDetails = whoCanGo.length > 0
+    ? `Going with: ${whoCanGo.map(p => p.name).join(', ')}`
+    : 'Trip dates';
+  const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(plan.name)}&dates=${gcalStart}/${gcalEnd}&details=${encodeURIComponent(gcalDetails)}`;
+
+  function downloadIcs() {
+    if (!plan) return;
+    const icsEnd = format(addDays(endDate, 1), 'yyyyMMdd');
+    const icsStart = format(startDate, 'yyyyMMdd');
+    const description = whoCanGo.length > 0
+      ? `Going with: ${whoCanGo.map(p => p.name).join(', ')}`
+      : '';
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Hatch a Plan//EN',
+      'BEGIN:VEVENT',
+      `UID:${planId}-${start}@hatch-a-plan`,
+      `DTSTART;VALUE=DATE:${icsStart}`,
+      `DTEND;VALUE=DATE:${icsEnd}`,
+      `SUMMARY:${plan.name}`,
+      `DESCRIPTION:${description}`,
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n');
+
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${plan.name.replace(/\s+/g, '-')}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function copyLink() {
+    navigator.clipboard.writeText(`${window.location.origin}/plan/${planId}/itinerary?${bookParams}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <main className="dot-bg min-h-screen p-4 pb-16">
+      <Nav />
+      <div className="max-w-md mx-auto">
+
+        {/* Header */}
+        <div className="fade-up fade-up-1 pt-8 pb-2">
+          <a href={`/plan/${planId}/book?${bookParams}`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-5"
+            style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.18)', textDecoration: 'none' }}>
+            <span style={{ fontSize: '0.7rem' }}>✈️</span>
+            <span className="label-tag" style={{ color: 'var(--color-coral)', fontSize: '0.62rem' }}>← Back</span>
+          </a>
+
+          <div className="text-4xl mb-3">🗓️</div>
+          <h1 className="font-display font-bold" style={{ fontSize: '2rem', lineHeight: 1.1, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}>
+            {plan.name}
+          </h1>
+          <p className="mt-2 text-base font-semibold" style={{ color: 'var(--color-coral)' }}>
+            {format(startDate, 'd MMM')} – {format(endDate, 'd MMM yyyy')} · {nights} night{nights !== 1 ? 's' : ''}
+          </p>
+        </div>
+
+        {/* Who can make it */}
+        <div className="fade-up fade-up-2 card px-5 py-5 mt-5">
+          <h2 className="font-display font-bold text-lg mb-3" style={{ color: 'var(--color-ink)' }}>
+            Who can make it 🙌
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {whoCanGo.map(p => (
+              <span key={p.id}
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium"
+                style={{ background: 'var(--color-preferred-bg)', color: '#065F46', border: '1.5px solid rgba(5,150,105,0.2)' }}>
+                <span style={{ fontSize: '0.7rem' }}>✓</span> {p.name}
+              </span>
+            ))}
+            {whoCanGo.length === 0 && (
+              <p className="text-sm" style={{ color: 'var(--color-muted)' }}>No one available for these dates.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Add to calendar */}
+        <div className="fade-up fade-up-3 card px-5 py-5 mt-4">
+          <h2 className="font-display font-bold text-lg mb-1" style={{ color: 'var(--color-ink)' }}>
+            Add to calendar
+          </h2>
+          <p className="text-sm mb-4" style={{ color: 'var(--color-muted)' }}>
+            Save these dates straight to your calendar app.
+          </p>
+          <div className="space-y-3">
+            <a
+              href={gcalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-150"
+              style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', textDecoration: 'none' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--color-border-mid)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--color-border)'; }}
+            >
+              <span style={{ fontSize: '1.25rem' }}>📅</span>
+              <span className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>Google Calendar</span>
+              <span className="ml-auto label-tag" style={{ color: 'var(--color-faint)', fontSize: '0.6rem' }}>Opens in new tab ↗</span>
+            </a>
+
+            <button
+              onClick={downloadIcs}
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-150"
+              style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', textAlign: 'left' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-border-mid)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-border)'; }}
+            >
+              <span style={{ fontSize: '1.25rem' }}>🍎</span>
+              <span className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>Apple / Outlook / other</span>
+              <span className="ml-auto label-tag" style={{ color: 'var(--color-faint)', fontSize: '0.6rem' }}>Download .ics</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Share this page */}
+        <div className="fade-up fade-up-4 mt-4">
+          <button
+            onClick={copyLink}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl label-tag transition-all duration-150"
+            style={{
+              background: copied ? '#ECFDF5' : 'var(--color-surface)',
+              border: `1.5px solid ${copied ? 'rgba(5,150,105,0.3)' : 'var(--color-border)'}`,
+              color: copied ? '#065F46' : 'var(--color-muted)',
+            }}
+          >
+            {copied ? '✓ Link copied!' : '🔗 Copy itinerary link'}
+          </button>
+        </div>
+
+      </div>
+    </main>
+  );
+}
+
+export default function ItineraryPage() {
+  return (
+    <Suspense fallback={
+      <main className="dot-bg min-h-screen flex items-center justify-center">
+        <p className="font-display text-2xl font-semibold" style={{ color: 'var(--color-muted)' }}>Loading…</p>
+      </main>
+    }>
+      <ItineraryContent />
+    </Suspense>
+  );
+}

@@ -88,8 +88,20 @@ function BookContent() {
           </div>
         </div>
 
-        {/* What's next */}
+        {/* Share itinerary */}
         <div className="fade-up fade-up-3 mt-5">
+          <a href={`/plan/${planId}/itinerary?${bookParams}`}
+            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-display font-semibold text-base transition-all duration-150"
+            style={{ background: 'var(--color-coral)', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 14px rgba(244,98,31,0.35)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--color-coral-dim)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--color-coral)'; }}
+          >
+            <span>📋</span> Share itinerary
+          </a>
+        </div>
+
+        {/* What's next */}
+        <div className="fade-up fade-up-4 mt-5">
           <p className="label-tag mb-3 text-center" style={{ color: 'var(--color-faint)' }}>What would you like to do next?</p>
           <div className="space-y-3">
 
