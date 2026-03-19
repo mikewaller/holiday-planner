@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Nav from '@/components/Nav';
+
+const CYCLING_WORDS = ['plan', 'ski trip', 'dinner', 'night out', 'summer holiday', 'reunion', 'day out', 'birthday'];
 
 export default function Home() {
   const router = useRouter();
@@ -11,19 +13,39 @@ export default function Home() {
   const [windowEnd, setWindowEnd] = useState('');
   const [minDuration, setMinDuration] = useState(3);
   const [maxDuration, setMaxDuration] = useState(7);
+  const [singleDay, setSingleDay] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [wordIndex, setWordIndex] = useState(0);
+  const [wordPhase, setWordPhase] = useState<'in' | 'out'>('in');
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordPhase('out');
+      setTimeout(() => {
+        setWordIndex(i => (i + 1) % CYCLING_WORDS.length);
+        setWordPhase('in');
+      }, 400);
+    }, 2600);
+    return () => clearInterval(interval);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (minDuration > maxDuration) { setError('Minimum nights can\'t exceed maximum.'); return; }
+    if (!singleDay && minDuration > maxDuration) { setError('Minimum nights can\'t exceed maximum.'); return; }
     setLoading(true);
     try {
       const res = await fetch('/api/plans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, window_start: windowStart, window_end: windowEnd, min_duration: minDuration, max_duration: maxDuration }),
+        body: JSON.stringify({
+          name,
+          window_start: windowStart,
+          window_end: windowEnd,
+          min_duration: singleDay ? 1 : minDuration,
+          max_duration: singleDay ? 1 : maxDuration,
+        }),
       });
       if (!res.ok) throw new Error();
       const { id, creator_token } = await res.json();
@@ -52,7 +74,16 @@ export default function Home() {
             className="font-display"
             style={{ fontSize: '3rem', lineHeight: 1.1, fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}
           >
-            Time to <span style={{ color: 'var(--color-coral)' }}>hatch</span><br />a plan
+            Let&apos;s hatch a<br />
+            <div style={{ overflow: 'hidden', paddingBottom: '0.2em', marginBottom: '-0.2em', display: 'inline-block' }}>
+              <span
+                key={wordIndex}
+                className={`word-${wordPhase}`}
+                style={{ color: 'var(--color-coral)', display: 'inline-block' }}
+              >
+                {CYCLING_WORDS[wordIndex]}
+              </span>
+            </div>
           </h1>
           <p className="mt-3 text-base" style={{ color: 'var(--color-muted)', fontWeight: 400 }}>
             Find dates that work for everyone. Share a link. No fuss.
@@ -65,17 +96,42 @@ export default function Home() {
 
             <div>
               <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>
-                Trip name
+                Plan name
               </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Amalfi Coast, Summer '25"
+                placeholder="e.g. Summer holiday, Mike's birthday, Team away day…"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 className="field-input"
               />
             </div>
+
+            {/* Single day toggle */}
+            <button
+              type="button"
+              onClick={() => setSingleDay(v => !v)}
+              className="flex items-center gap-3 w-full text-left"
+            >
+              <div
+                className="flex-shrink-0 w-10 h-6 rounded-full transition-all duration-200 relative"
+                style={{ background: singleDay ? 'var(--color-coral)' : 'var(--color-border-mid)' }}
+              >
+                <div
+                  className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200"
+                  style={{ left: singleDay ? '1.25rem' : '0.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+                />
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-ink)', fontFamily: 'var(--font-nunito)' }}>
+                  Single day event
+                </p>
+                <p className="text-xs" style={{ color: 'var(--color-faint)' }}>
+                  Just picking one day, not an overnight trip
+                </p>
+              </div>
+            </button>
 
             <div>
               <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>
@@ -93,21 +149,23 @@ export default function Home() {
               </div>
             </div>
 
-            <div>
-              <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>
-                Trip length (nights)
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="label-tag mb-1" style={{ color: 'var(--color-faint)', fontSize: '0.62rem' }}>Minimum</p>
-                  <input type="number" required min={1} max={30} value={minDuration} onChange={e => setMinDuration(Number(e.target.value))} className="field-input" />
-                </div>
-                <div>
-                  <p className="label-tag mb-1" style={{ color: 'var(--color-faint)', fontSize: '0.62rem' }}>Maximum</p>
-                  <input type="number" required min={1} max={30} value={maxDuration} onChange={e => setMaxDuration(Number(e.target.value))} className="field-input" />
+            {!singleDay && (
+              <div>
+                <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>
+                  Length (nights)
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="label-tag mb-1" style={{ color: 'var(--color-faint)', fontSize: '0.62rem' }}>Minimum</p>
+                    <input type="number" required min={1} max={30} value={minDuration} onChange={e => setMinDuration(Number(e.target.value))} className="field-input" />
+                  </div>
+                  <div>
+                    <p className="label-tag mb-1" style={{ color: 'var(--color-faint)', fontSize: '0.62rem' }}>Maximum</p>
+                    <input type="number" required min={1} max={30} value={maxDuration} onChange={e => setMaxDuration(Number(e.target.value))} className="field-input" />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {error && (
               <p className="text-sm font-medium" style={{ color: 'var(--color-cantdo)' }}>{error}</p>
@@ -126,7 +184,7 @@ export default function Home() {
               onMouseEnter={e => { if (!loading) { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral-dim)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 8px rgba(244,98,31,0.25)'; }}}
               onMouseLeave={e => { if (!loading) { (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 14px rgba(244,98,31,0.35)'; }}}
             >
-              {loading ? 'Creating your plan…' : 'Plan this trip ✈'}
+              {loading ? 'Creating…' : 'Start planning →'}
             </button>
           </form>
         </div>
