@@ -68,6 +68,23 @@ export default function PlanPage() {
   }, [planId]);
 
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
+
+  // Realtime subscription — refetch when availability or participants change
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`plan-${planId}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'availability', filter: `plan_id=eq.${planId}` },
+        () => fetchPlan()
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'participants', filter: `plan_id=eq.${planId}` },
+        () => fetchPlan()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [planId, fetchPlan]);
   useEffect(() => {
     const stored = localStorage.getItem(`participant_${planId}`);
     if (stored) setMe(JSON.parse(stored));
