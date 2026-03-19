@@ -599,7 +599,7 @@ export default function PlanPage() {
               <h2 className="font-display font-bold text-xl" style={{ color: 'var(--color-ink)' }}>Best dates ✨</h2>
               <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>Top windows based on everyone&apos;s availability</p>
             </div>
-            <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+            <div>
               {bestWindows.map((w, i) => {
                 const endDate = addDays(parseISO(w.start), w.maxNights - 1);
                 const nightsLabel = w.minNights === 1 && w.maxNights === 1 ? 'Day trip' : w.minNights === w.maxNights ? `${w.minNights} night${w.minNights !== 1 ? 's' : ''}` : `${w.minNights}–${w.maxNights} nights`;
@@ -609,7 +609,7 @@ export default function PlanPage() {
                     key={i}
                     href={`/plan/${planId}/book?start=${w.start}&nights=${w.maxNights}`}
                     className="flex items-center gap-3 px-5 py-4 transition-all duration-150"
-                    style={{ textDecoration: 'none', display: 'flex' }}
+                    style={{ textDecoration: 'none', display: 'flex', borderTop: i > 0 ? '1px solid var(--color-border)' : 'none' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--color-bg)'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = ''; }}
                   >
@@ -628,7 +628,7 @@ export default function PlanPage() {
                         {w.cantDoCount > 0 && <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-cantdo-bg)', color: 'var(--color-cantdo)', fontSize: '0.58rem' }}>{w.cantDoCount} can&apos;t do</span>}
                       </div>
                     </div>
-                    <span style={{ color: 'var(--color-faint)', fontSize: '1.1rem' }}>›</span>
+                    <span style={{ color: 'var(--color-coral)', fontSize: '1.2rem', fontWeight: 600 }}>›</span>
                   </a>
                 );
               })}
