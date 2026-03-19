@@ -101,10 +101,9 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               fontFamily: 'Georgia, serif',
               fontWeight: 700,
               color: '#F4621F',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
+              letterSpacing: 2,
             }}>
-              Hatch a Plan
+              HATCH A PLAN
             </span>
           </div>
 
@@ -115,7 +114,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               fontWeight: 700,
               color: '#2C1F14',
               lineHeight: 1.05,
-              letterSpacing: '-0.02em',
+              letterSpacing: -2,
               maxWidth: 700,
             }}>
               {tripName}
@@ -135,16 +134,9 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                   {dateRange}
                 </span>
                 {nights && (
-                  <>
-                    <span style={{ color: '#C4A898', fontSize: 20 }}>·</span>
-                    <span style={{
-                      fontSize: 22,
-                      color: '#C4A898',
-                      fontFamily: 'Georgia, serif',
-                    }}>
-                      {nights}
-                    </span>
-                  </>
+                  <span style={{ color: '#C4A898', fontSize: 22, fontFamily: 'Georgia, serif', display: 'flex', gap: 12 }}>
+                    · {nights}
+                  </span>
                 )}
               </div>
             )}
@@ -156,7 +148,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               color: '#fff',
               borderRadius: 14,
               padding: '12px 24px',
-              width: 'fit-content',
+              alignSelf: 'flex-start',
               fontSize: 20,
               fontFamily: 'Georgia, serif',
               fontWeight: 700,
