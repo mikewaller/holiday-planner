@@ -17,7 +17,17 @@ const nunito = Nunito({
 
 export const metadata: Metadata = {
   title: "Hatch a Plan",
-  description: "Hatch the perfect trip together — find dates that work for everyone",
+  description: "Find dates that work for everyone. Share a link. No fuss.",
+  openGraph: {
+    title: "Hatch a Plan",
+    description: "Find dates that work for everyone. Share a link. No fuss.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Hatch a Plan",
+    description: "Find dates that work for everyone. Share a link. No fuss.",
+  },
 };
 
 export const viewport: Viewport = {
