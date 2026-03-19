@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import sql from '@/lib/db';
 import { createClient } from '@/lib/supabase/server';
+import { availabilityLimiter, getIP } from '@/lib/ratelimit';
 
 interface PlanRow { id: string; is_locked: number; }
 interface ParticipantRow { id: string; name: string; participant_token: string; user_id: string | null; }
 
 export async function POST(req: NextRequest) {
+  const { success } = await availabilityLimiter.limit(getIP(req));
+  if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+
   const { plan_id, name, participant_token } = await req.json();
 
   if (!plan_id || !name) {
@@ -48,6 +52,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const { success } = await availabilityLimiter.limit(getIP(req));
+  if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+
   const { participant_id, participant_token, plan_id, date, status } = await req.json();
 
   if (!participant_id || !participant_token || !plan_id || !date) {

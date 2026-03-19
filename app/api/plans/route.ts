@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import sql from '@/lib/db';
 import { createClient } from '@/lib/supabase/server';
+import { planCreateLimiter, getIP } from '@/lib/ratelimit';
 
 export async function POST(req: NextRequest) {
+  const { success } = await planCreateLimiter.limit(getIP(req));
+  if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+
   const { name, window_start, window_end, min_duration, max_duration } = await req.json();
 
   if (!name || !window_start || !window_end || !min_duration || !max_duration) {

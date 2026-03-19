@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { addDays, format, parseISO } from 'date-fns';
 import { getAirport, resolveAirportCode } from '@/lib/airports';
 import { climateForRange } from '@/lib/climate';
+import { flightSearchLimiter, getIP } from '@/lib/ratelimit';
 
 export async function GET(req: NextRequest) {
+  const { success } = await flightSearchLimiter.limit(getIP(req));
+  if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+
   const { searchParams } = new URL(req.url);
   const origin = searchParams.get('origin')?.toUpperCase();
   const departureDate = searchParams.get('departureDate'); // YYYY-MM-DD
