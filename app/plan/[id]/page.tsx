@@ -82,7 +82,7 @@ export default function PlanPage() {
 
   // Show welcome modal for first-time visitors who aren't being auto-joined
   useEffect(() => {
-    if (!plan || me || authed === null || autoJoinName) return;
+    if (!plan || me || authed === null || autoJoinName || resolvedCreatorToken) return;
     const seen = localStorage.getItem(`welcome_seen_${planId}`);
     if (!seen) setShowWelcomeModal(true);
   }, [plan, me, authed, autoJoinName, planId]);
