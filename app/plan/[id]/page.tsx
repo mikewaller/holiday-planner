@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Nav from '@/components/Nav';
 import { createClient } from '@/lib/supabase/client';
@@ -57,6 +57,11 @@ export default function PlanPage() {
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
   const [activeMonthIndex, setActiveMonthIndex] = useState(0);
   const [poppingDate, setPoppingDate] = useState<string | null>(null);
+  const meRef = useRef(me);
+  useEffect(() => { meRef.current = me; }, [me]);
+  const participantsRef = useRef(participants);
+  useEffect(() => { participantsRef.current = participants; }, [participants]);
+  const [realtimePopInfo, setRealtimePopInfo] = useState<{ date: string; name: string } | null>(null);
 
   const fetchPlan = useCallback(async () => {
     const res = await fetch(`/api/plans/${planId}`);
@@ -76,13 +81,31 @@ export default function PlanPage() {
       .channel(`plan-${planId}`)
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'availability', filter: `plan_id=eq.${planId}` },
-        () => fetchPlan()
+        (payload) => {
+          console.log('[realtime] availability change', payload);
+          const date = (payload.new as { date?: string })?.date;
+          const participantId = (payload.new as { participant_id?: string })?.participant_id;
+          if (date && participantId !== meRef.current?.id) {
+            const participant = participantsRef.current.find(p => p.id === participantId);
+            const firstName = participant?.name?.split(' ')[0] ?? '';
+            setPoppingDate(date);
+            setTimeout(() => setPoppingDate(null), 250);
+            if (firstName) {
+              setRealtimePopInfo({ date, name: firstName });
+              setTimeout(() => setRealtimePopInfo(null), 1200);
+            }
+          }
+          fetchPlan();
+        }
       )
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'participants', filter: `plan_id=eq.${planId}` },
-        () => fetchPlan()
+        (payload) => {
+          console.log('[realtime] participants change', payload);
+          fetchPlan();
+        }
       )
-      .subscribe();
+      .subscribe((status) => console.log('[realtime] status', status));
     return () => { supabase.removeChannel(channel); };
   }, [planId, fetchPlan]);
   useEffect(() => {
@@ -576,6 +599,30 @@ export default function PlanPage() {
                         <span style={{ fontFamily: 'var(--font-nunito)', fontSize: '0.78rem' }}>
                           {format(parseISO(date), 'd')}
                         </span>
+                        {realtimePopInfo?.date === date && (
+                          <span
+                            key={realtimePopInfo.name + date}
+                            className="name-float"
+                            style={{
+                              position: 'absolute',
+                              bottom: '80%',
+                              left: '50%',
+                              whiteSpace: 'nowrap',
+                              pointerEvents: 'none',
+                              zIndex: 50,
+                              background: 'var(--color-ink)',
+                              color: '#fff',
+                              fontSize: '0.55rem',
+                              fontWeight: 700,
+                              fontFamily: 'var(--font-nunito)',
+                              borderRadius: '99px',
+                              padding: '2px 6px',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                            }}
+                          >
+                            {realtimePopInfo.name}
+                          </span>
+                        )}
                         {hasAnyResponse && (
                           <div className="absolute bottom-1 flex gap-0.5">
                             {stats.preferred > 0 && <span className="w-1 h-1 rounded-full" style={{ background: STATUS_CONFIG.preferred.dot }} />}
