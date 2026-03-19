@@ -41,6 +41,7 @@ export default function PlanPage() {
   const [joiningName, setJoiningName] = useState(false);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [autoJoinName, setAutoJoinName] = useState<string | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [copied, setCopied] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -79,6 +80,13 @@ export default function PlanPage() {
     });
   }, []);
 
+  // Show welcome modal for first-time visitors who aren't being auto-joined
+  useEffect(() => {
+    if (!plan || me || authed === null || autoJoinName) return;
+    const seen = localStorage.getItem(`welcome_seen_${planId}`);
+    if (!seen) setShowWelcomeModal(true);
+  }, [plan, me, authed, autoJoinName, planId]);
+
   // Auto-join for logged-in users who have a display name set
   useEffect(() => {
     if (!autoJoinName || !plan || me || plan.is_locked) return;
@@ -115,6 +123,8 @@ export default function PlanPage() {
     const meData = { id: participant_id, name: nameInput.trim(), token: participant_token };
     setMe(meData);
     localStorage.setItem(`participant_${planId}`, JSON.stringify(meData));
+    localStorage.setItem(`welcome_seen_${planId}`, '1');
+    setShowWelcomeModal(false);
     setJoiningName(false); fetchPlan();
   }
 
@@ -582,6 +592,77 @@ export default function PlanPage() {
         )}
 
       </div>
+
+      {/* ── Welcome modal ───────────────────────────────────── */}
+      {showWelcomeModal && plan && (
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4"
+          style={{ background: 'rgba(44,31,20,0.55)', zIndex: 2000, backdropFilter: 'blur(2px)' }}
+          onClick={e => {
+            if (e.target === e.currentTarget) {
+              localStorage.setItem(`welcome_seen_${planId}`, '1');
+              setShowWelcomeModal(false);
+            }
+          }}
+        >
+          <div className="card w-full max-w-sm p-6 fade-up fade-up-1" style={{ boxShadow: '0 16px 48px rgba(44,31,20,0.22)' }}>
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--color-coral-light)' }}>
+                <span style={{ fontSize: '1rem' }}>✈️</span>
+              </div>
+              <span className="label-tag" style={{ color: 'var(--color-coral)', letterSpacing: '0.06em' }}>You&apos;ve been invited</span>
+            </div>
+
+            <h2 className="font-display font-bold mb-1" style={{ fontSize: '1.6rem', lineHeight: 1.15, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}>
+              {plan.name}
+            </h2>
+            <p className="text-sm mb-5" style={{ color: 'var(--color-muted)', lineHeight: 1.6 }}>
+              Mark your availability between{' '}
+              <span style={{ color: 'var(--color-ink)', fontWeight: 600 }}>
+                {format(parseISO(plan.window_start), 'd MMM')}
+              </span>
+              {' '}and{' '}
+              <span style={{ color: 'var(--color-ink)', fontWeight: 600 }}>
+                {format(parseISO(plan.window_end), 'd MMM yyyy')}
+              </span>
+              {' '}and we&apos;ll find the best dates that work for everyone.
+            </p>
+
+            {/* Name input */}
+            <div className="space-y-3">
+              <div>
+                <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Your name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sarah"
+                  value={nameInput}
+                  onChange={e => setNameInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && joinPlan()}
+                  className="field-input"
+                  autoFocus
+                />
+              </div>
+              <button
+                onClick={joinPlan}
+                disabled={joiningName || !nameInput.trim()}
+                className="w-full py-3 rounded-xl font-display font-semibold text-lg transition-all duration-200 disabled:opacity-40"
+                style={{ background: 'var(--color-coral)', color: '#fff', boxShadow: '0 4px 14px rgba(244,98,31,0.35)', letterSpacing: '-0.01em' }}
+              >
+                {joiningName ? 'Joining…' : 'Join the plan →'}
+              </button>
+              {nameError && <p className="text-sm font-medium text-center" style={{ color: 'var(--color-cantdo)' }}>{nameError}</p>}
+              <button
+                onClick={() => { localStorage.setItem(`welcome_seen_${planId}`, '1'); setShowWelcomeModal(false); }}
+                className="w-full text-sm text-center py-1"
+                style={{ color: 'var(--color-faint)', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                I&apos;ll join later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Fixed calendar tooltip (escapes overflow:hidden) ─ */}
       {hoveredDate && hoveredBreakdown && participants.length > 0 && tooltipPos && (
