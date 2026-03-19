@@ -602,7 +602,7 @@ export default function PlanPage() {
             <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
               {bestWindows.map((w, i) => {
                 const endDate = addDays(parseISO(w.start), w.maxNights - 1);
-                const nightsLabel = w.minNights === w.maxNights ? `${w.minNights} night${w.minNights !== 1 ? 's' : ''}` : `${w.minNights}–${w.maxNights} nights`;
+                const nightsLabel = w.minNights === 1 && w.maxNights === 1 ? 'Day trip' : w.minNights === w.maxNights ? `${w.minNights} night${w.minNights !== 1 ? 's' : ''}` : `${w.minNights}–${w.maxNights} nights`;
                 const medals = ['🥇', '🥈', '🥉', '4th', '5th'];
                 return (
                   <a
