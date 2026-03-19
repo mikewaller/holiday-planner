@@ -39,6 +39,9 @@ export default function PlanPage() {
   const [nameInput, setNameInput] = useState('');
   const [nameError, setNameError] = useState('');
   const [joiningName, setJoiningName] = useState(false);
+  const [renamingMe, setRenamingMe] = useState(false);
+  const [renameInput, setRenameInput] = useState('');
+  const [renameError, setRenameError] = useState('');
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [autoJoinName, setAutoJoinName] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -126,6 +129,23 @@ export default function PlanPage() {
     localStorage.setItem(`welcome_seen_${planId}`, '1');
     setShowWelcomeModal(false);
     setJoiningName(false); fetchPlan();
+  }
+
+  async function saveRename() {
+    if (!me || !renameInput.trim()) return;
+    setRenameError('');
+    const res = await fetch('/api/availability', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ participant_id: me.id, participant_token: me.token, plan_id: planId, name: renameInput.trim() }),
+    });
+    if (res.status === 409) { setRenameError('That name is taken — try another!'); return; }
+    if (!res.ok) { setRenameError('Something went wrong.'); return; }
+    const updated = { ...me, name: renameInput.trim() };
+    setMe(updated);
+    localStorage.setItem(`participant_${planId}`, JSON.stringify(updated));
+    setRenamingMe(false);
+    fetchPlan();
   }
 
   async function toggleDate(date: string) {
@@ -408,13 +428,38 @@ export default function PlanPage() {
             {showNamePrompt && !nameError && <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-coral)' }}>Enter your name above to start marking your dates 👆</p>}
           </div>
         ) : (
-          <div className="fade-up fade-up-2 flex items-center justify-between px-4 py-3 card">
-            <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-              Marking as <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>{me.name}</span>
-            </p>
-            <button onClick={() => { localStorage.removeItem(`participant_${planId}`); setMe(null); setNameInput(''); }} className="label-tag transition-opacity" style={{ color: 'var(--color-faint)' }}>
-              Change
-            </button>
+          <div className="fade-up fade-up-2 px-4 py-3 card">
+            {renamingMe ? (
+              <div className="space-y-2">
+                <p className="text-sm mb-2" style={{ color: 'var(--color-muted)' }}>Change your name:</p>
+                <div className="flex gap-2 items-stretch">
+                  <input
+                    type="text"
+                    value={renameInput}
+                    onChange={e => setRenameInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && saveRename()}
+                    className="field-input flex-1"
+                    autoFocus
+                  />
+                  <button onClick={saveRename} disabled={!renameInput.trim()} className="px-4 rounded-xl font-display font-semibold text-white transition-all duration-150 disabled:opacity-40" style={{ background: 'var(--color-coral)' }}>
+                    Save
+                  </button>
+                  <button onClick={() => { setRenamingMe(false); setRenameError(''); }} className="px-4 rounded-xl label-tag transition-all duration-150" style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)' }}>
+                    Cancel
+                  </button>
+                </div>
+                {renameError && <p className="text-sm font-medium" style={{ color: 'var(--color-cantdo)' }}>{renameError}</p>}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+                  Marking as <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>{me.name}</span>
+                </p>
+                <button onClick={() => { setRenameInput(me.name); setRenamingMe(true); }} className="label-tag transition-opacity" style={{ color: 'var(--color-faint)' }}>
+                  Change
+                </button>
+              </div>
+            )}
           </div>
         )}
 

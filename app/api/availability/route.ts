@@ -51,6 +51,31 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ participant_id: id, participant_token: token });
 }
 
+export async function PATCH(req: NextRequest) {
+  const { success } = await availabilityLimiter.limit(getIP(req));
+  if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+
+  const { participant_id, participant_token, plan_id, name } = await req.json();
+
+  if (!participant_id || !participant_token || !plan_id || !name?.trim()) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  }
+
+  const [participant] = await sql<ParticipantRow[]>`
+    SELECT * FROM participants WHERE id = ${participant_id} AND participant_token = ${participant_token}
+  `;
+  if (!participant) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+
+  const [nameTaken] = await sql`
+    SELECT id FROM participants WHERE plan_id = ${plan_id} AND name = ${name.trim()} AND id != ${participant_id}
+  `;
+  if (nameTaken) return NextResponse.json({ error: 'Name already taken in this plan' }, { status: 409 });
+
+  await sql`UPDATE participants SET name = ${name.trim()} WHERE id = ${participant_id}`;
+
+  return NextResponse.json({ success: true });
+}
+
 export async function PUT(req: NextRequest) {
   const { success } = await availabilityLimiter.limit(getIP(req));
   if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
