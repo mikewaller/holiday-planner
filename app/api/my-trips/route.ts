@@ -24,7 +24,11 @@ export async function GET() {
 
   const [plans, contributed] = await Promise.all([
     sql<PlanRow[]>`
-      SELECT * FROM plans WHERE user_id = ${user.id} ORDER BY created_at DESC
+      SELECT p.*, pv.viewed_at AS last_viewed_at
+      FROM plans p
+      LEFT JOIN plan_views pv ON pv.plan_id = p.id AND pv.user_id = ${user.id}
+      WHERE p.user_id = ${user.id}
+      ORDER BY p.created_at DESC
     `,
     sql<PlanRow[]>`
       SELECT DISTINCT p.* FROM plans p

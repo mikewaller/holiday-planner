@@ -105,5 +105,7 @@ export async function PUT(req: NextRequest) {
     `;
   }
 
+  await sql`UPDATE plans SET last_activity_at = NOW() WHERE id = ${plan_id}`;
+
   return NextResponse.json({ success: true });
 }

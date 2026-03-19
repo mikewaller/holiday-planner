@@ -13,6 +13,7 @@ interface PlanRow {
   is_locked: number;
   created_at: string;
   user_id: string | null;
+  last_activity_at: string | null;
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -29,13 +30,25 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { data: { user } } = await supabase.auth.getUser();
   const isOwner = user && plan.user_id && user.id === plan.user_id;
 
+  // Record view and get last_viewed_at for owner
+  let lastViewedAt: string | null = null;
+  if (isOwner) {
+    const [existing] = await sql`SELECT viewed_at FROM plan_views WHERE plan_id = ${id} AND user_id = ${user!.id}`;
+    lastViewedAt = existing?.viewed_at ?? null;
+    await sql`
+      INSERT INTO plan_views (plan_id, user_id, viewed_at)
+      VALUES (${id}, ${user!.id}, NOW())
+      ON CONFLICT (plan_id, user_id) DO UPDATE SET viewed_at = NOW()
+    `;
+  }
+
   const { creator_token, user_id: _uid, ...safePlan } = plan;
 
   return NextResponse.json({
     plan: safePlan,
     participants,
     availability,
-    ...(isOwner ? { creator_token } : {}),
+    ...(isOwner ? { creator_token, last_viewed_at: lastViewedAt, last_activity_at: plan.last_activity_at } : {}),
   });
 }
 

@@ -15,12 +15,19 @@ interface Plan {
   creator_token: string;
   is_locked: number;
   created_at: string;
+  last_activity_at: string | null;
+  last_viewed_at: string | null;
 }
 
 function PlanCard({ plan, i, showCreatorLink }: { plan: Plan; i: number; showCreatorLink: boolean }) {
   const href = showCreatorLink
     ? `/plan/${plan.id}?creator=${plan.creator_token}`
     : `/plan/${plan.id}`;
+
+  const hasNewActivity = showCreatorLink &&
+    plan.last_activity_at &&
+    (!plan.last_viewed_at || new Date(plan.last_activity_at) > new Date(plan.last_viewed_at));
+
   return (
     <a
       key={plan.id}
@@ -40,6 +47,9 @@ function PlanCard({ plan, i, showCreatorLink }: { plan: Plan; i: number; showCre
               ? <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: '#FEF9C3', color: '#854D0E', fontSize: '0.58rem' }}>🔒 Locked</span>
               : <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-preferred-bg)', color: '#065F46', fontSize: '0.58rem' }}>● Open</span>
             }
+            {hasNewActivity && (
+              <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-coral-light)', color: 'var(--color-coral)', fontSize: '0.58rem' }}>● New activity</span>
+            )}
           </div>
           <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
             {format(parseISO(plan.window_start), 'd MMM')} – {format(parseISO(plan.window_end), 'd MMM yyyy')}
@@ -68,11 +78,22 @@ export default function MyTripsPage() {
       setUserEmail(user.email ?? '');
     });
 
-    fetch('/api/my-trips').then(r => r.json()).then(data => {
-      setPlans(data.plans ?? []);
-      setContributed(data.contributed ?? []);
-      setLoading(false);
-    });
+    function loadTrips() {
+      fetch('/api/my-trips').then(r => r.json()).then(data => {
+        setPlans(data.plans ?? []);
+        setContributed(data.contributed ?? []);
+        setLoading(false);
+      });
+    }
+
+    loadTrips();
+
+    function handlePageShow(e: PageTransitionEvent) {
+      if (e.persisted) loadTrips();
+    }
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
   }, [router]);
 
   async function signOut() {
