@@ -1,27 +1,19 @@
 import { ImageResponse } from 'next/og';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-async function loadFont() {
-  try {
-    const css = await fetch(
-      'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&display=swap',
-      { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; bot)' } }
-    ).then(r => r.text());
-    const match = css.match(/src: url\(([^)]+)\) format\('woff2'\)/);
-    if (!match) return null;
-    return fetch(match[1]).then(r => r.arrayBuffer());
-  } catch {
-    return null;
-  }
+function loadFont(): ArrayBuffer {
+  return readFileSync(join(process.cwd(), 'app/fonts/Fraunces-Bold.ttf')).buffer as ArrayBuffer;
 }
 
 export default async function Image() {
-  const fontData = await loadFont();
-  const fonts = fontData ? [{ name: 'Fraunces', data: fontData, weight: 700 as const }] : [];
-  const displayFont = fontData ? 'Fraunces, Georgia, serif' : 'Georgia, serif';
+  const fontData = loadFont();
+  const fonts = [{ name: 'Fraunces', data: fontData, weight: 700 as const }];
+  const displayFont = 'Fraunces, Georgia, serif';
 
   return new ImageResponse(
     (

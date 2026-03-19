@@ -1,4 +1,6 @@
 import { ImageResponse } from 'next/og';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import sql from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -18,26 +20,16 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-async function loadFont() {
-  try {
-    const css = await fetch(
-      'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&display=swap',
-      { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; bot)' } }
-    ).then(r => r.text());
-    const match = css.match(/src: url\(([^)]+)\) format\('woff2'\)/);
-    if (!match) return null;
-    return fetch(match[1]).then(r => r.arrayBuffer());
-  } catch {
-    return null;
-  }
+function loadFont(): ArrayBuffer {
+  return readFileSync(join(process.cwd(), 'app/fonts/Fraunces-Bold.ttf')).buffer as ArrayBuffer;
 }
 
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [plan] = await sql<PlanRow[]>`SELECT name, window_start, window_end, min_duration, max_duration FROM plans WHERE id = ${id}`;
 
-  const fontData = await loadFont();
-  const fonts = fontData ? [{ name: 'Fraunces', data: fontData, weight: 700 as const }] : [];
+  const fontData = loadFont();
+  const fonts = [{ name: 'Fraunces', data: fontData, weight: 700 as const }];
 
   const tripName = plan?.name ?? 'Trip Plan';
   const dateRange = plan
