@@ -335,7 +335,7 @@ export default function PlanPage() {
                 <p className="mt-1 text-sm flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>
                   {format(parseISO(plan.window_start), 'd MMM')} – {format(parseISO(plan.window_end), 'd MMM yyyy')}
                   <span className="mx-0.5" style={{ color: 'var(--color-faint)' }}>·</span>
-                  {plan.min_duration}–{plan.max_duration} nights
+                  {plan.min_duration === 1 && plan.max_duration === 1 ? 'Day trip' : `${plan.min_duration}–${plan.max_duration} nights`}
                   {resolvedCreatorToken && (
                     <button onClick={openEditDates} title="Edit date range"
                       className="transition-opacity hover:opacity-70"
