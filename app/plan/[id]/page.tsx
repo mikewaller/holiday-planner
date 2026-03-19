@@ -82,7 +82,6 @@ export default function PlanPage() {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'availability', filter: `plan_id=eq.${planId}` },
         (payload) => {
-          console.log('[realtime] availability change', payload);
           const date = (payload.new as { date?: string })?.date;
           const participantId = (payload.new as { participant_id?: string })?.participant_id;
           if (date && participantId !== meRef.current?.id) {
@@ -100,12 +99,11 @@ export default function PlanPage() {
       )
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'participants', filter: `plan_id=eq.${planId}` },
-        (payload) => {
-          console.log('[realtime] participants change', payload);
+        () => {
           fetchPlan();
         }
       )
-      .subscribe((status) => console.log('[realtime] status', status));
+      .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [planId, fetchPlan]);
   useEffect(() => {
