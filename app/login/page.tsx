@@ -36,7 +36,7 @@ function LoginForm() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}`,
       },
     });
     setLoading(false);
@@ -48,7 +48,7 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true); setMessage(''); setIsError(false);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/reset-password')}`,
+      redirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent('/reset-password')}`,
     });
     setLoading(false);
     if (error) { setIsError(true); setMessage(error.message); }
@@ -77,7 +77,7 @@ function LoginForm() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}` },
     });
     setLoading(false);
     if (error) { setIsError(true); setMessage(error.message); }
