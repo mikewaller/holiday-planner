@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Nav from '@/components/Nav';
 
-const CYCLING_WORDS = ['plan', 'ski trip', 'dinner', 'night out', 'summer holiday', 'reunion', 'day out', 'birthday', 'weekend trip', 'spa day', 'stag do', 'hen do'];
+const CYCLING_WORDS = ['plan', 'ski trip', 'summer holiday', 'long weekend', 'city break', 'stag do', 'reunion', 'day out', 'weekend trip', 'spa day', 'hen do'];
 
 export default function Home() {
   const router = useRouter();
@@ -61,7 +61,7 @@ export default function Home() {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center p-4 py-12 overflow-hidden" style={{ background: 'var(--color-bg)' }}>
+    <main className="relative min-h-screen flex items-center justify-center p-4 py-12 overflow-hidden" style={{ background: '#FEFDFE' }}>
       {/* Background egg art */}
       <img src="/bg-egg.png" alt="" aria-hidden="true"
         style={{ position: 'absolute', left: 'calc(-2% - 30px)', top: '50%', transform: 'translateY(-50%)', width: '136%', height: 'auto', pointerEvents: 'none', userSelect: 'none' }} />
