@@ -20,6 +20,8 @@ function LoginForm() {
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
     if (errorParam) {
@@ -68,10 +70,24 @@ function LoginForm() {
     }
   }
 
+  async function signUp(e: React.FormEvent) {
+    e.preventDefault();
+    if (password !== confirmPassword) { setIsError(true); setMessage('Passwords don\'t match.'); return; }
+    setLoading(true); setMessage(''); setIsError(false);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+    });
+    setLoading(false);
+    if (error) { setIsError(true); setMessage(error.message); }
+    else { setIsError(false); setMessage('Account created! Check your email to confirm, then sign in.'); setShowSignUp(false); }
+  }
+
   return (
     <div className="fade-up fade-up-2 card p-6 shadow-lg" style={{ boxShadow: '0 8px 32px rgba(44,31,20,0.10)' }}>
-      {/* Tab switcher */}
-      <div className="flex rounded-xl p-1 mb-5" style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)' }}>
+      {/* Tab switcher — hidden when signing up */}
+      {!showSignUp && <div className="flex rounded-xl p-1 mb-5" style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)' }}>
         {(['magic', 'password'] as const).map(t => (
           <button key={t} onClick={() => { setTab(t); setMessage(''); }}
             className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-150"
@@ -86,9 +102,9 @@ function LoginForm() {
             {t === 'magic' ? '✉️ Magic link' : '🔒 Password'}
           </button>
         ))}
-      </div>
+      </div>}
 
-      {tab === 'magic' ? (
+      {showSignUp ? null : tab === 'magic' ? (
         <form onSubmit={sendMagicLink} className="space-y-4">
           <div>
             <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Email</label>
@@ -149,9 +165,54 @@ function LoginForm() {
         </form>
       )}
 
+      {showSignUp && (
+        <form onSubmit={signUp} className="space-y-4 mt-2">
+          <div>
+            <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Email</label>
+            <input type="email" required placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className="field-input" />
+          </div>
+          <div>
+            <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Password</label>
+            <input type="password" required placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="field-input" />
+          </div>
+          <div>
+            <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Confirm password</label>
+            <input type="password" required placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="field-input" />
+          </div>
+          <button type="submit" disabled={loading}
+            className="w-full py-3.5 rounded-xl font-display font-semibold text-lg transition-all duration-200 disabled:opacity-50"
+            style={{ background: 'var(--color-coral)', color: '#fff', letterSpacing: '-0.01em', boxShadow: '0 4px 14px rgba(244,98,31,0.35)' }}
+            onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral-dim)'; }}
+            onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-coral)'; }}
+          >
+            {loading ? 'Creating account…' : 'Create account'}
+          </button>
+          <p className="text-xs text-center" style={{ color: 'var(--color-faint)' }}>
+            Already have an account?{' '}
+            <button type="button" onClick={() => { setShowSignUp(false); setMessage(''); }} style={{ color: 'var(--color-coral)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit' }}>
+              Sign in
+            </button>
+          </p>
+        </form>
+      )}
+
       {message && (
         <p className="mt-4 text-sm font-medium text-center" style={{ color: isError ? 'var(--color-cantdo)' : 'var(--color-preferred)' }}>
           {message}
+        </p>
+      )}
+
+      {!showSignUp && (
+        <p className="mt-5 text-sm text-center" style={{ color: 'var(--color-faint)' }}>
+          New here? Use the magic link tab — or{' '}
+          <button
+            type="button"
+            onClick={() => { setShowSignUp(true); setMessage(''); }}
+            style={{ color: 'var(--color-coral)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit' }}
+          >
+            sign up with a password
+          </button>
+          .
         </p>
       )}
     </div>
@@ -182,9 +243,9 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
 
-        <div className="fade-up fade-up-3 mt-6 text-center">
+        <div className="fade-up fade-up-3 mt-4 text-center">
           <p className="text-sm" style={{ color: 'var(--color-faint)' }}>
-            No account needed to join a trip — sign in only to manage your own plans.
+            No account needed to join a trip.
           </p>
         </div>
 
