@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Nav from '@/components/Nav';
 
-const CYCLING_WORDS = ['plan', 'ski trip', 'dinner', 'night out', 'summer holiday', 'reunion', 'day out', 'birthday'];
+const CYCLING_WORDS = ['plan', 'ski trip', 'dinner', 'night out', 'summer holiday', 'reunion', 'day out', 'birthday', 'weekend trip', 'spa day', 'stag do', 'hen do'];
 
 export default function Home() {
   const router = useRouter();
