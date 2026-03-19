@@ -64,7 +64,7 @@ export default function Home() {
     <main className="relative min-h-screen flex items-center justify-center p-4 py-12 overflow-hidden" style={{ background: '#FEFDFE' }}>
       {/* Background egg art */}
       <img src="/bg-egg.png" alt="" aria-hidden="true"
-        style={{ position: 'absolute', left: 'calc(-2% - 30px)', top: '50%', transform: 'translateY(-50%)', width: '136%', height: 'auto', pointerEvents: 'none', userSelect: 'none' }} />
+        style={{ position: 'absolute', left: 'calc(-2% - 30px)', top: '50%', transform: 'translateY(-50%)', width: '136%', height: 'auto', pointerEvents: 'none', userSelect: 'none', opacity: 0.65 }} />
       <Nav />
       <div className="relative z-10 w-full max-w-md">
 
@@ -75,11 +75,11 @@ export default function Home() {
             style={{ fontSize: '3rem', lineHeight: 1.1, fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}
           >
             Let&apos;s hatch a<br />
-            <div style={{ overflow: 'hidden', paddingBottom: '0.2em', marginBottom: '-0.2em', display: 'inline-block' }}>
+            <div style={{ overflow: 'hidden', padding: '0.1em 0.2em 0.2em 0.1em', margin: '-0.1em -0.2em -0.2em -0.1em', display: 'inline-block' }}>
               <span
                 key={wordIndex}
                 className={`word-${wordPhase}`}
-                style={{ color: 'var(--color-coral)', display: 'inline-block' }}
+                style={{ color: 'var(--color-coral)', display: 'inline-block', fontStyle: 'italic' }}
               >
                 {CYCLING_WORDS[wordIndex]}
               </span>
@@ -101,7 +101,7 @@ export default function Home() {
               <input
                 type="text"
                 required
-                placeholder="e.g. Summer holiday, Mike's birthday, Team away day…"
+                placeholder="e.g. Summer holiday, ski trip 2027, Team away day…"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 className="field-input"
