@@ -17,6 +17,7 @@ interface Availability { participant_id: string; date: string; status: Status; }
 interface BestWindow {
   start: string; minNights: number; maxNights: number; score: number;
   preferredCount: number; freeCount: number; unansweredCount: number; cantDoCount: number;
+  cantDoNames: string[];
 }
 
 const STATUS_CONFIG: Record<Status, { label: string; cellBg: string; cellText: string; dot: string; tagBg: string; tagText: string }> = {
@@ -62,6 +63,8 @@ export default function PlanPage() {
   const participantsRef = useRef(participants);
   useEffect(() => { participantsRef.current = participants; }, [participants]);
   const [realtimePopInfo, setRealtimePopInfo] = useState<{ date: string; name: string } | null>(null);
+  const [expandedWindow, setExpandedWindow] = useState<string | null>(null);
+  const [pickedNights, setPickedNights] = useState<Record<string, number>>({});
 
   const fetchPlan = useCallback(async () => {
     const res = await fetch(`/api/plans/${planId}`);
@@ -265,15 +268,17 @@ export default function PlanPage() {
       if (maxNights < plan.min_duration) continue;
       const windowDates = allDates.slice(i, i + maxNights).map(d => format(d, 'yyyy-MM-dd'));
       let preferred = 0, free = 0, unanswered = 0, cantDo = 0;
+      const cantDoNames: string[] = [];
       for (const p of participants) {
         let pp = 0, pf = 0, pc = 0;
         for (const date of windowDates) {
           const e = availability.find(a => a.participant_id === p.id && a.date === date);
           if (e?.status === 'preferred') pp++; else if (e?.status === 'free') pf++; else if (e?.status === 'cant_do') pc++;
         }
-        if (pc > 0) cantDo++; else if (pp > 0) preferred++; else if (pf > 0) free++; else unanswered++;
+        if (pc > 0) { cantDo++; cantDoNames.push(p.name.split(' ')[0]); }
+        else if (pp > 0) preferred++; else if (pf > 0) free++; else unanswered++;
       }
-      windows.push({ start: format(allDates[i], 'yyyy-MM-dd'), minNights: plan.min_duration, maxNights, score: preferred * 3 + free * 2 + unanswered - cantDo * 10, preferredCount: preferred, freeCount: free, unansweredCount: unanswered, cantDoCount: cantDo });
+      windows.push({ start: format(allDates[i], 'yyyy-MM-dd'), minNights: plan.min_duration, maxNights, score: preferred * 3 + free * 2 + unanswered - cantDo * 10, preferredCount: preferred, freeCount: free, unansweredCount: unanswered, cantDoCount: cantDo, cantDoNames });
     }
     return windows.sort((a, b) => b.score - a.score).slice(0, 5);
   }
@@ -621,11 +626,27 @@ export default function PlanPage() {
                             {realtimePopInfo.name}
                           </span>
                         )}
-                        {hasAnyResponse && (
+                        {stats.cant_do > 0 && (
+                          <span
+                            className="absolute flex items-center justify-center"
+                            style={{
+                              top: '2px', right: '2px',
+                              width: '12px', height: '12px',
+                              borderRadius: '50%',
+                              background: '#DC2626',
+                              color: '#fff',
+                              fontSize: '0.5rem',
+                              fontWeight: 800,
+                              lineHeight: 1,
+                              fontFamily: 'var(--font-nunito)',
+                              boxShadow: '0 1px 3px rgba(220,38,38,0.4)',
+                            }}
+                          >!</span>
+                        )}
+                        {hasAnyResponse && stats.cant_do === 0 && (
                           <div className="absolute bottom-1 flex gap-0.5">
                             {stats.preferred > 0 && <span className="w-1 h-1 rounded-full" style={{ background: STATUS_CONFIG.preferred.dot }} />}
                             {stats.free > 0 && <span className="w-1 h-1 rounded-full" style={{ background: STATUS_CONFIG.free.dot }} />}
-                            {stats.cant_do > 0 && <span className="w-1 h-1 rounded-full" style={{ background: STATUS_CONFIG.cant_do.dot }} />}
                           </div>
                         )}
                       </div>
@@ -655,48 +676,164 @@ export default function PlanPage() {
         )}
 
         {/* ── Best windows ─────────────────────────────────── */}
-        {bestWindows.length > 0 && availability.length > 0 && (
-          <div className="fade-up fade-up-5 card overflow-hidden">
-            <div className="px-5 py-4" style={{ background: 'linear-gradient(135deg, #FFF7F3 0%, #FFF0E9 100%)', borderBottom: '1.5px solid var(--color-border)' }}>
-              <h2 className="font-display font-bold text-xl" style={{ color: 'var(--color-ink)' }}>Best dates ✨</h2>
-              <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>Top windows based on everyone&apos;s availability</p>
-            </div>
-            <div>
-              {bestWindows.map((w, i) => {
-                const endDate = addDays(parseISO(w.start), w.maxNights - 1);
-                const nightsLabel = w.minNights === 1 && w.maxNights === 1 ? 'Day trip' : w.minNights === w.maxNights ? `${w.minNights} night${w.minNights !== 1 ? 's' : ''}` : `${w.minNights}–${w.maxNights} nights`;
-                const medals = ['🥇', '🥈', '🥉', '4th', '5th'];
-                return (
-                  <a
-                    key={i}
-                    href={`/plan/${planId}/book?start=${w.start}&nights=${w.maxNights}`}
-                    className="flex items-center gap-3 px-5 py-4 transition-all duration-150"
-                    style={{ textDecoration: 'none', display: 'flex', borderTop: i > 0 ? '1px solid var(--color-border)' : 'none' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--color-bg)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = ''; }}
-                  >
-                    <div className="text-xl flex-shrink-0 w-8 text-center">
-                      {i < 3 ? medals[i] : <span className="label-tag" style={{ color: 'var(--color-faint)' }}>#{i+1}</span>}
+        {bestWindows.length > 0 && availability.length > 0 && (() => {
+          const cleanWindows = bestWindows.filter(w => w.cantDoCount === 0);
+          const conflictWindows = bestWindows.filter(w => w.cantDoCount > 0);
+          const medals = ['🥇', '🥈', '🥉', '4th', '5th'];
+          let rankCounter = 0;
+
+          const WindowRow = ({ w, rank }: { w: BestWindow; rank: number }) => {
+            const needsPicker = w.minNights !== w.maxNights;
+            const isExpanded = expandedWindow === w.start;
+            const nights = pickedNights[w.start] ?? w.minNights;
+            const endDate = addDays(parseISO(w.start), (isExpanded ? nights : w.maxNights) - 1);
+            const displayEnd = addDays(parseISO(w.start), w.maxNights - 1);
+            const nightsLabel = w.minNights === 1 && w.maxNights === 1 ? 'Day trip' : w.minNights === w.maxNights ? `${w.minNights} night${w.minNights !== 1 ? 's' : ''}` : `${w.minNights}–${w.maxNights} nights`;
+
+            const infoTags = (
+              <div className="flex gap-1.5 mt-1 flex-wrap items-center">
+                {w.preferredCount > 0 && <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-preferred-bg)', color: 'var(--color-preferred)', fontSize: '0.58rem' }}>{w.preferredCount} preferred</span>}
+                {w.freeCount > 0 && <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-free-bg)', color: 'var(--color-free)', fontSize: '0.58rem' }}>{w.freeCount} free</span>}
+                {w.unansweredCount > 0 && <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-bg)', color: 'var(--color-faint)', fontSize: '0.58rem' }}>{w.unansweredCount} no answer</span>}
+                {w.cantDoNames.length > 0 && (
+                  <span className="label-tag px-2 py-0.5 rounded-full inline-flex items-center gap-1" style={{ background: 'var(--color-cantdo-bg)', color: 'var(--color-cantdo)', fontSize: '0.58rem' }}>
+                    <span style={{ fontWeight: 900 }}>!</span> {w.cantDoNames.join(', ')} can&apos;t make it
+                  </span>
+                )}
+              </div>
+            );
+
+            // No picker needed — direct link
+            if (!needsPicker) {
+              return (
+                <a
+                  href={`/plan/${planId}/book?start=${w.start}&nights=${w.maxNights}`}
+                  className="flex items-center gap-3 px-5 py-4 transition-all duration-150"
+                  style={{ textDecoration: 'none', display: 'flex' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--color-bg)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = ''; }}
+                >
+                  <div className="text-xl flex-shrink-0 w-8 text-center">
+                    {rank < 3 ? medals[rank] : <span className="label-tag" style={{ color: 'var(--color-faint)' }}>#{rank+1}</span>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>
+                      {format(parseISO(w.start), 'd MMM')} – {format(displayEnd, 'd MMM yyyy')}
+                      <span className="ml-2 font-normal text-xs" style={{ color: 'var(--color-muted)' }}>{nightsLabel}</span>
+                    </p>
+                    {infoTags}
+                  </div>
+                  <span style={{ color: 'var(--color-coral)', fontSize: '1.2rem', fontWeight: 600 }}>›</span>
+                </a>
+              );
+            }
+
+            // Range — expandable row with night picker
+            return (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setExpandedWindow(isExpanded ? null : w.start)}
+                  className="flex items-center gap-3 px-5 py-4 w-full text-left transition-all duration-150"
+                  style={{ background: isExpanded ? 'var(--color-bg)' : '' }}
+                  onMouseEnter={e => { if (!isExpanded) (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg)'; }}
+                  onMouseLeave={e => { if (!isExpanded) (e.currentTarget as HTMLButtonElement).style.background = ''; }}
+                >
+                  <div className="text-xl flex-shrink-0 w-8 text-center">
+                    {rank < 3 ? medals[rank] : <span className="label-tag" style={{ color: 'var(--color-faint)' }}>#{rank+1}</span>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>
+                      {format(parseISO(w.start), 'd MMM')} – {format(displayEnd, 'd MMM yyyy')}
+                      <span className="ml-2 font-normal text-xs" style={{ color: 'var(--color-muted)' }}>{nightsLabel}</span>
+                    </p>
+                    {infoTags}
+                  </div>
+                  <span style={{ color: 'var(--color-coral)', fontSize: '1.2rem', fontWeight: 600, transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s ease', display: 'inline-block' }}>›</span>
+                </button>
+
+                {isExpanded && (
+                  <div className="px-5 pb-4" style={{ borderTop: '1px solid var(--color-border)', background: 'var(--color-bg)' }}>
+                    <p className="label-tag mt-3 mb-2" style={{ color: 'var(--color-muted)' }}>How many nights?</p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {Array.from({ length: w.maxNights - w.minNights + 1 }, (_, i) => w.minNights + i).map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setPickedNights(prev => ({ ...prev, [w.start]: n }))}
+                          className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150"
+                          style={{
+                            background: nights === n ? 'var(--color-coral)' : 'var(--color-surface)',
+                            color: nights === n ? '#fff' : 'var(--color-muted)',
+                            border: nights === n ? 'none' : '1.5px solid var(--color-border)',
+                            boxShadow: nights === n ? '0 2px 8px rgba(244,98,31,0.25)' : 'none',
+                          }}
+                        >
+                          {n}n
+                        </button>
+                      ))}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>
-                        {format(parseISO(w.start), 'd MMM')} – {format(endDate, 'd MMM yyyy')}
-                        <span className="ml-2 font-normal text-xs" style={{ color: 'var(--color-muted)' }}>{nightsLabel}</span>
-                      </p>
-                      <div className="flex gap-2 mt-1 flex-wrap">
-                        {w.preferredCount > 0 && <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-preferred-bg)', color: 'var(--color-preferred)', fontSize: '0.58rem' }}>{w.preferredCount} preferred</span>}
-                        {w.freeCount > 0 && <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-free-bg)', color: 'var(--color-free)', fontSize: '0.58rem' }}>{w.freeCount} free</span>}
-                        {w.unansweredCount > 0 && <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-bg)', color: 'var(--color-faint)', fontSize: '0.58rem' }}>{w.unansweredCount} no answer</span>}
-                        {w.cantDoCount > 0 && <span className="label-tag px-2 py-0.5 rounded-full" style={{ background: 'var(--color-cantdo-bg)', color: 'var(--color-cantdo)', fontSize: '0.58rem' }}>{w.cantDoCount} can&apos;t do</span>}
+                    <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>
+                      {format(parseISO(w.start), 'd MMM')} – {format(endDate, 'd MMM yyyy')}
+                    </p>
+                    <a
+                      href={`/plan/${planId}/book?start=${w.start}&nights=${nights}`}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-display font-semibold text-sm transition-all duration-150"
+                      style={{ background: 'var(--color-coral)', color: '#fff', textDecoration: 'none', boxShadow: '0 3px 10px rgba(244,98,31,0.3)' }}
+                    >
+                      Let&apos;s go →
+                    </a>
+                  </div>
+                )}
+              </div>
+            );
+          };
+
+          return (
+            <div className="fade-up fade-up-5 card overflow-hidden">
+              <div className="px-5 py-4" style={{ background: 'linear-gradient(135deg, #FFF7F3 0%, #FFF0E9 100%)', borderBottom: '1.5px solid var(--color-border)' }}>
+                <h2 className="font-display font-bold text-xl" style={{ color: 'var(--color-ink)' }}>Best dates ✨</h2>
+                <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>Top windows based on everyone&apos;s availability</p>
+              </div>
+
+              {cleanWindows.length > 0 && (
+                <div>
+                  <div className="px-5 pt-3 pb-1.5">
+                    <span className="label-tag inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'var(--color-preferred-bg)', color: 'var(--color-preferred)', fontSize: '0.6rem' }}>
+                      ✓ Works for everyone
+                    </span>
+                  </div>
+                  {cleanWindows.map((w) => {
+                    const rank = rankCounter++;
+                    return (
+                      <div key={w.start} style={{ borderTop: '1px solid var(--color-border)' }}>
+                        <WindowRow w={w} rank={rank} />
                       </div>
-                    </div>
-                    <span style={{ color: 'var(--color-coral)', fontSize: '1.2rem', fontWeight: 600 }}>›</span>
-                  </a>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
+
+              {conflictWindows.length > 0 && (
+                <div style={{ borderTop: cleanWindows.length > 0 ? '2px solid var(--color-border)' : 'none' }}>
+                  <div className="px-5 pt-3 pb-1.5">
+                    <span className="label-tag inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'var(--color-cantdo-bg)', color: 'var(--color-cantdo)', fontSize: '0.6rem' }}>
+                      ! Almost works
+                    </span>
+                  </div>
+                  {conflictWindows.map((w) => {
+                    const rank = rankCounter++;
+                    return (
+                      <div key={w.start} style={{ borderTop: '1px solid var(--color-border)' }}>
+                        <WindowRow w={w} rank={rank} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
       </div>
 
