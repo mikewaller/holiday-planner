@@ -64,6 +64,7 @@ export default function Home() {
     <main className="relative min-h-screen flex items-center justify-center p-4 py-12 overflow-hidden" style={{ background: '#FEFDFE' }}>
       {/* Background egg art */}
       <img src="/bg-egg.png" alt="" aria-hidden="true"
+        className="hidden md:block"
         style={{ position: 'absolute', left: 'calc(-2% - 30px)', top: '50%', transform: 'translateY(-50%)', width: '136%', height: 'auto', pointerEvents: 'none', userSelect: 'none', opacity: 0.65 }} />
       <Nav />
       <div className="relative z-10 w-full max-w-md">

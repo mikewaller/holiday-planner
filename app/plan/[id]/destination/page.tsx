@@ -41,7 +41,15 @@ function KnownDestination({
   nights: number; checkin: string; checkout: string;
 }) {
   const [destination, setDestination] = useState('');
-  const bookingUrl = destination.trim()
+  const [origin, setOrigin] = useState('');
+
+  const flightsUrl = destination.trim() && origin.trim()
+    ? `https://www.google.com/flights#flt=${origin.trim().toUpperCase()}.${destination.trim()}.${checkin}*${destination.trim()}.${origin.trim().toUpperCase()}.${checkout};tt=o`
+    : destination.trim()
+    ? `https://www.google.com/flights#flt=.${destination.trim()}.${checkin}*.${destination.trim()}..${checkout};tt=o`
+    : null;
+
+  const hotelsUrl = destination.trim()
     ? `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination.trim())}&checkin=${checkin}&checkout=${checkout}&group_adults=2&no_rooms=1`
     : null;
 
@@ -66,37 +74,67 @@ function KnownDestination({
             </p>
           )}
         </div>
-        <div className="fade-up fade-up-2 card p-6" style={{ boxShadow: '0 8px 32px rgba(44,31,20,0.08)' }}>
-          <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Destination</label>
-          <div className="flex gap-2">
+
+        <div className="fade-up fade-up-2 card p-6 space-y-4" style={{ boxShadow: '0 8px 32px rgba(44,31,20,0.08)' }}>
+          <div>
+            <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Destination</label>
             <input
               type="text"
               placeholder="e.g. Barcelona, Lisbon, Tokyo…"
               value={destination}
               onChange={e => setDestination(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && bookingUrl) window.open(bookingUrl, '_blank'); }}
-              className="field-input flex-1"
+              className="field-input"
             />
+          </div>
+          <div>
+            <label className="label-tag block mb-1.5" style={{ color: 'var(--color-muted)' }}>Departure airport <span style={{ color: 'var(--color-faint)', fontWeight: 400 }}>(optional, for flights)</span></label>
+            <AirportAutocomplete value={origin} onSelect={code => setOrigin(code)} />
+          </div>
+        </div>
+
+        {destination.trim() && (
+          <div className="fade-up fade-up-3 mt-4 space-y-3">
             <a
-              href={bookingUrl ?? '#'}
-              onClick={e => { if (!bookingUrl) e.preventDefault(); }}
+              href={flightsUrl ?? '#'}
+              onClick={e => { if (!flightsUrl) e.preventDefault(); }}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 rounded-xl font-display font-semibold text-white transition-all duration-150 flex items-center flex-shrink-0"
-              style={{
-                background: bookingUrl ? 'var(--color-coral)' : 'var(--color-border)',
-                boxShadow: bookingUrl ? '0 3px 10px rgba(244,98,31,0.3)' : 'none',
-                textDecoration: 'none',
-                opacity: bookingUrl ? 1 : 0.5,
-              }}
+              className="flex items-center gap-4 card px-6 py-5 transition-all duration-150"
+              style={{ textDecoration: 'none' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 20px rgba(44,31,20,0.12)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = ''; }}
             >
-              Search →
+              <div className="text-3xl flex-shrink-0">✈️</div>
+              <div className="flex-1">
+                <p className="font-display font-bold text-lg" style={{ color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>Search flights</p>
+                <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>
+                  {origin.trim() ? `${origin.trim().toUpperCase()} → ${destination.trim()}` : `To ${destination.trim()}`} · {checkin} – {checkout}
+                </p>
+              </div>
+              <span style={{ color: 'var(--color-coral)', fontSize: '1.3rem' }}>›</span>
+            </a>
+
+            <a
+              href={hotelsUrl ?? '#'}
+              onClick={e => { if (!hotelsUrl) e.preventDefault(); }}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-4 card px-6 py-5 transition-all duration-150"
+              style={{ textDecoration: 'none' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 20px rgba(44,31,20,0.12)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = ''; }}
+            >
+              <div className="text-3xl flex-shrink-0">🏨</div>
+              <div className="flex-1">
+                <p className="font-display font-bold text-lg" style={{ color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>Search hotels</p>
+                <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>
+                  {destination.trim()} · {checkin} – {checkout}
+                </p>
+              </div>
+              <span style={{ color: 'var(--color-coral)', fontSize: '1.3rem' }}>›</span>
             </a>
           </div>
-          <p className="mt-3 text-xs" style={{ color: 'var(--color-faint)' }}>
-            Your dates ({checkin} → {checkout}) will be pre-filled on Booking.com.
-          </p>
-        </div>
+        )}
       </div>
     </main>
   );
