@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Nav from '@/components/Nav';
 import { createClient } from '@/lib/supabase/client';
-import { addDays, format, parseISO, eachDayOfInterval } from 'date-fns';
+import { addDays, differenceInDays, format, parseISO, eachDayOfInterval } from 'date-fns';
 
 type Status = 'free' | 'cant_do' | 'preferred';
 
@@ -65,6 +65,10 @@ export default function PlanPage() {
   const [realtimePopInfo, setRealtimePopInfo] = useState<{ date: string; name: string } | null>(null);
   const [expandedWindow, setExpandedWindow] = useState<string | null>(null);
   const [pickedNights, setPickedNights] = useState<Record<string, number>>({});
+  const [dateMode, setDateMode] = useState<'recommend' | 'choose'>('recommend');
+  const [rangeStart, setRangeStart] = useState<string | null>(null);
+  const [rangeEnd, setRangeEnd] = useState<string | null>(null);
+  const [rangeHover, setRangeHover] = useState<string | null>(null);
 
   const fetchPlan = useCallback(async () => {
     const res = await fetch(`/api/plans/${planId}`);
@@ -506,6 +510,23 @@ export default function PlanPage() {
           </div>
         )}
 
+        {/* ── Who's coming ─────────────────────────────────── */}
+        {participants.length > 0 && (
+          <div className="fade-up fade-up-3 card px-5 py-4">
+            <h3 className="font-display font-bold mb-3" style={{ color: 'var(--color-ink)' }}>
+              Who&apos;s coming? 🌍
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {participants.map(p => (
+                <span key={p.id} className="text-sm px-3 py-1.5 rounded-full font-medium"
+                  style={{ background: me?.id === p.id ? 'var(--color-coral-light)' : 'var(--color-bg)', color: me?.id === p.id ? 'var(--color-coral)' : 'var(--color-muted)', border: `1.5px solid ${me?.id === p.id ? 'rgba(244,98,31,0.2)' : 'var(--color-border)'}` }}>
+                  {p.name}{me?.id === p.id && ' · you'}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Legend ──────────────────────────────────────── */}
         {me && !plan.is_locked && (
           <div className="fade-up fade-up-3 card px-4 py-3">
@@ -522,14 +543,11 @@ export default function PlanPage() {
                 No answer
               </span>
             </div>
-            <p className="mt-2 text-xs" style={{ color: 'var(--color-faint)' }}>
-              Best dates ranked: preferred › free › no answer › can&apos;t do
-            </p>
           </div>
         )}
 
         {/* ── Calendar ────────────────────────────────────── */}
-        <div className="fade-up fade-up-3 card">
+        <div className="fade-up fade-up-3 card" id="calendar">
           <div className="flex items-center justify-between px-5 pt-4 pb-3" style={{ borderBottom: '1.5px solid var(--color-border)' }}>
             <h2 className="font-display font-bold text-lg" style={{ color: 'var(--color-ink)' }}>
               {months.length > 1 ? months[activeMonthIndex].label : 'Availability'}
@@ -551,6 +569,21 @@ export default function PlanPage() {
             )}
           </div>
 
+          {dateMode === 'choose' && (
+            <div className="mx-4 mt-3 mb-1 px-3 py-2.5 rounded-xl flex items-center gap-2.5"
+              style={{ background: 'rgba(244,98,31,0.08)', border: '1.5px solid rgba(244,98,31,0.2)' }}>
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>📅</span>
+              <p className="text-xs font-semibold" style={{ color: 'var(--color-coral)', lineHeight: 1.4 }}>
+                {!rangeStart ? 'Tap a start date' : !rangeEnd ? 'Now tap an end date' : `${format(parseISO(rangeStart), 'd MMM')} – ${format(parseISO(rangeEnd), 'd MMM yyyy')} selected`}
+              </p>
+              {(rangeStart || rangeEnd) && (
+                <button type="button" onClick={() => { setRangeStart(null); setRangeEnd(null); }}
+                  className="ml-auto label-tag flex-shrink-0"
+                  style={{ color: 'var(--color-coral)', opacity: 0.7 }}>Reset</button>
+              )}
+            </div>
+          )}
+
           {(() => {
             const month = months[activeMonthIndex] ?? months[0];
             if (!month) return null;
@@ -571,10 +604,42 @@ export default function PlanPage() {
                     const isClickable = !!me && !plan.is_locked;
                     const isPopping = poppingDate === date;
 
+                    // Range selection state
+                    const isRangeStart = dateMode === 'choose' && rangeStart === date;
+                    const isRangeEnd = dateMode === 'choose' && rangeEnd === date;
+                    const previewEnd = rangeEnd ?? rangeHover;
+                    const inRange = dateMode === 'choose' && rangeStart && previewEnd && date > rangeStart && date < previewEnd;
+
+                    const rangeStyle = dateMode === 'choose' ? (() => {
+                      if (isRangeStart || isRangeEnd) return {
+                        background: 'var(--color-coral)', color: '#fff',
+                        borderRadius: '10px', border: 'none',
+                        boxShadow: '0 2px 8px rgba(244,98,31,0.35)',
+                      };
+                      if (inRange) return {
+                        background: '#FFF0E9', color: 'var(--color-coral)',
+                        borderRadius: '4px', border: '1.5px solid rgba(244,98,31,0.25)',
+                        boxShadow: 'none',
+                      };
+                      return null;
+                    })() : null;
+
                     return (
                       <div
                         key={date}
                         onClick={() => {
+                          if (dateMode === 'choose') {
+                            if (!rangeStart || rangeEnd) {
+                              setRangeStart(date);
+                              setRangeEnd(null);
+                            } else if (date <= rangeStart) {
+                              setRangeStart(date);
+                              setRangeEnd(null);
+                            } else {
+                              setRangeEnd(date);
+                            }
+                            return;
+                          }
                           if (!me && !plan.is_locked) {
                             setShowNamePrompt(true);
                             setTimeout(() => setShowNamePrompt(false), 3000);
@@ -583,20 +648,27 @@ export default function PlanPage() {
                           }
                         }}
                         onMouseEnter={e => {
+                          if (dateMode === 'choose') {
+                            if (rangeStart && !rangeEnd) setRangeHover(date);
+                            return;
+                          }
                           setHoveredDate(date);
                           const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
                           setTooltipPos({ top: rect.top, left: rect.left + rect.width / 2 });
                         }}
-                        onMouseLeave={() => { setHoveredDate(null); setTooltipPos(null); }}
-                        className={`relative aspect-square flex flex-col items-center justify-center text-xs font-semibold transition-all duration-150 ${isPopping ? 'cell-pop' : ''} ${!plan.is_locked ? 'cursor-pointer' : ''}`}
-                        style={{
+                        onMouseLeave={() => {
+                          if (dateMode === 'choose') { setRangeHover(null); return; }
+                          setHoveredDate(null); setTooltipPos(null);
+                        }}
+                        className={`relative aspect-square flex flex-col items-center justify-center text-xs font-semibold transition-all duration-150 ${isPopping ? 'cell-pop' : ''} cursor-pointer`}
+                        style={rangeStyle ?? {
                           background: cfg ? cfg.cellBg : 'var(--color-bg)',
                           color: cfg ? cfg.cellText : 'var(--color-muted)',
                           borderRadius: '10px',
                           border: cfg ? 'none' : '1.5px solid var(--color-border)',
                           boxShadow: cfg ? '0 2px 6px rgba(0,0,0,0.12)' : 'none',
                         }}
-                        onMouseOver={e => { if (isClickable) (e.currentTarget as HTMLDivElement).style.opacity = '0.82'; }}
+                        onMouseOver={e => { if (isClickable || dateMode === 'choose') (e.currentTarget as HTMLDivElement).style.opacity = '0.82'; }}
                         onMouseOut={e => { (e.currentTarget as HTMLDivElement).style.opacity = '1'; }}
                       >
                         <span style={{ fontFamily: 'var(--font-nunito)', fontSize: '0.78rem' }}>
@@ -658,22 +730,6 @@ export default function PlanPage() {
           })()}
         </div>
 
-        {/* ── Participants ─────────────────────────────────── */}
-        {participants.length > 0 && (
-          <div className="fade-up fade-up-4 card px-5 py-4">
-            <h3 className="font-display font-bold mb-3" style={{ color: 'var(--color-ink)' }}>
-              {participants.length} {participants.length === 1 ? 'person' : 'people'} planning 🌍
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {participants.map(p => (
-                <span key={p.id} className="text-sm px-3 py-1.5 rounded-full font-medium"
-                  style={{ background: me?.id === p.id ? 'var(--color-coral-light)' : 'var(--color-bg)', color: me?.id === p.id ? 'var(--color-coral)' : 'var(--color-muted)', border: `1.5px solid ${me?.id === p.id ? 'rgba(244,98,31,0.2)' : 'var(--color-border)'}` }}>
-                  {p.name}{me?.id === p.id && ' · you'}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* ── Best windows ─────────────────────────────────── */}
         {bestWindows.length > 0 && availability.length > 0 && (() => {
@@ -792,11 +848,144 @@ export default function PlanPage() {
           return (
             <div className="fade-up fade-up-5 card overflow-hidden">
               <div className="px-5 py-4" style={{ background: 'linear-gradient(135deg, #FFF7F3 0%, #FFF0E9 100%)', borderBottom: '1.5px solid var(--color-border)' }}>
-                <h2 className="font-display font-bold text-xl" style={{ color: 'var(--color-ink)' }}>Best dates ✨</h2>
-                <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>Top windows based on everyone&apos;s availability</p>
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <h2 className="font-display font-bold text-xl" style={{ color: 'var(--color-ink)' }}>Best dates ✨</h2>
+                    <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>
+                      {dateMode === 'recommend' ? "Top windows based on everyone's availability" : 'Select your own date range on the calendar above'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 rounded-xl p-1 flex-shrink-0" style={{ background: 'rgba(44,31,20,0.07)' }}>
+                    {(['recommend', 'choose'] as const).map(mode => (
+                      <button key={mode} type="button"
+                        onClick={() => {
+                          setDateMode(mode);
+                          if (mode === 'choose') {
+                            setRangeStart(null); setRangeEnd(null);
+                            document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
+                        style={{
+                          background: dateMode === mode ? '#fff' : 'transparent',
+                          color: dateMode === mode ? 'var(--color-coral)' : 'var(--color-muted)',
+                          boxShadow: dateMode === mode ? '0 1px 4px rgba(44,31,20,0.12)' : 'none',
+                        }}>
+                        {mode === 'recommend' ? '✨ Recommend' : '📅 Choose my own'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              {cleanWindows.length > 0 && (
+              {/* ── Choose my own mode ── */}
+              {dateMode === 'choose' && (() => {
+                // Compute availability readout for any effective range (confirmed or hover preview)
+                const effectiveEnd = rangeEnd ?? (rangeStart && rangeHover && rangeHover > rangeStart ? rangeHover : null);
+                const rangeReadout = rangeStart && effectiveEnd ? (() => {
+                  const rangeDates = eachDayOfInterval({ start: parseISO(rangeStart), end: parseISO(effectiveEnd) }).map(d => format(d, 'yyyy-MM-dd'));
+                  const canMake: string[] = [], cantMake: string[] = [], noAnswer: string[] = [];
+                  for (const p of participants) {
+                    const hasCantDo = rangeDates.some(d => availability.find(a => a.participant_id === p.id && a.date === d)?.status === 'cant_do');
+                    const hasAny = rangeDates.some(d => availability.find(a => a.participant_id === p.id && a.date === d));
+                    if (hasCantDo) cantMake.push(p.name.split(' ')[0]);
+                    else if (hasAny) canMake.push(p.name.split(' ')[0]);
+                    else noAnswer.push(p.name.split(' ')[0]);
+                  }
+                  return { canMake, cantMake, noAnswer };
+                })() : null;
+
+                if (!rangeStart) return (
+                  <div className="px-5 py-6 text-center">
+                    <p className="text-sm" style={{ color: 'var(--color-muted)' }}>Tap a start date on the calendar above to begin.</p>
+                  </div>
+                );
+
+                const isConfirmed = !!rangeEnd;
+                const displayEnd = rangeEnd ?? (rangeHover && rangeHover > rangeStart ? rangeHover : null);
+                const nights = displayEnd ? differenceInDays(parseISO(displayEnd), parseISO(rangeStart)) : 0;
+                const tooShort = isConfirmed && plan && nights < plan.min_duration;
+                const tooLong = isConfirmed && plan && nights > plan.max_duration;
+                const isDayTrip = plan?.min_duration === 1 && plan?.max_duration === 1;
+                const valid = isConfirmed && !tooShort && !tooLong && nights >= 1;
+
+                return (
+                  <div className="px-5 py-4">
+                    {/* Date + nights summary */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex-1">
+                        {displayEnd ? (
+                          <>
+                            <p className="font-semibold text-sm" style={{ color: isConfirmed ? 'var(--color-ink)' : 'var(--color-muted)' }}>
+                              {format(parseISO(rangeStart), 'd MMM')} – {format(parseISO(displayEnd), 'd MMM yyyy')}
+                              {!isConfirmed && <span className="ml-1.5 text-xs font-normal" style={{ color: 'var(--color-faint)' }}>preview</span>}
+                            </p>
+                            <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
+                              {isDayTrip ? 'Day trip' : `${nights} night${nights !== 1 ? 's' : ''}`}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="font-semibold text-sm" style={{ color: 'var(--color-coral)' }}>
+                            {format(parseISO(rangeStart), 'd MMM')} selected — now tap an end date
+                          </p>
+                        )}
+                      </div>
+                      <button type="button" onClick={() => { setRangeStart(null); setRangeEnd(null); }}
+                        className="label-tag px-2.5 py-1 rounded-full transition-all flex-shrink-0"
+                        style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)' }}>
+                        Clear
+                      </button>
+                    </div>
+
+                    {/* Who can make it — live readout */}
+                    {rangeReadout && (rangeReadout.canMake.length > 0 || rangeReadout.cantMake.length > 0) && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {rangeReadout.canMake.map(name => (
+                          <span key={name} className="inline-flex items-center gap-1 label-tag px-2 py-1 rounded-full"
+                            style={{ background: 'var(--color-preferred-bg)', color: 'var(--color-preferred)', fontSize: '0.62rem' }}>
+                            ✓ {name}
+                          </span>
+                        ))}
+                        {rangeReadout.cantMake.map(name => (
+                          <span key={name} className="inline-flex items-center gap-1 label-tag px-2 py-1 rounded-full"
+                            style={{ background: 'var(--color-cantdo-bg)', color: 'var(--color-cantdo)', fontSize: '0.62rem' }}>
+                            ✕ {name}
+                          </span>
+                        ))}
+                        {rangeReadout.noAnswer.map(name => (
+                          <span key={name} className="inline-flex items-center gap-1 label-tag px-2 py-1 rounded-full"
+                            style={{ background: 'var(--color-bg)', color: 'var(--color-faint)', border: '1px solid var(--color-border)', fontSize: '0.62rem' }}>
+                            ? {name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {tooShort && (
+                      <p className="text-xs mb-3 font-medium" style={{ color: 'var(--color-cantdo)' }}>
+                        Too short — minimum is {plan?.min_duration} night{plan?.min_duration !== 1 ? 's' : ''} for this plan.
+                      </p>
+                    )}
+                    {tooLong && (
+                      <p className="text-xs mb-3 font-medium" style={{ color: 'var(--color-cantdo)' }}>
+                        Too long — maximum is {plan?.max_duration} night{plan?.max_duration !== 1 ? 's' : ''} for this plan.
+                      </p>
+                    )}
+                    {valid && (
+                      <a
+                        href={`/plan/${planId}/book?start=${rangeStart}&nights=${nights}`}
+                        className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-display font-semibold text-base transition-all duration-150"
+                        style={{ background: 'var(--color-coral)', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 14px rgba(244,98,31,0.35)' }}
+                      >
+                        Let&apos;s go →
+                      </a>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ── Recommend mode ── */}
+              {dateMode === 'recommend' && cleanWindows.length > 0 && (
                 <div>
                   <div className="px-5 pt-3 pb-1.5">
                     <span className="label-tag inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'var(--color-preferred-bg)', color: 'var(--color-preferred)', fontSize: '0.6rem' }}>
@@ -814,8 +1003,8 @@ export default function PlanPage() {
                 </div>
               )}
 
-              {conflictWindows.length > 0 && (
-                <div style={{ borderTop: cleanWindows.length > 0 ? '2px solid var(--color-border)' : 'none' }}>
+              {dateMode === 'recommend' && conflictWindows.length > 0 && (
+                <div style={{ borderTop: cleanWindows.length > 0 && dateMode === 'recommend' ? '2px solid var(--color-border)' : 'none' }}>
                   <div className="px-5 pt-3 pb-1.5">
                     <span className="label-tag inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'var(--color-cantdo-bg)', color: 'var(--color-cantdo)', fontSize: '0.6rem' }}>
                       ! Almost works
