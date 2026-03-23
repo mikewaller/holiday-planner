@@ -190,7 +190,7 @@ function BookContent() {
           <div className="space-y-3">
 
             {/* Discover destination — navigates to full-page map */}
-            <a href={`/plan/${planId}/destination?${bookParams}&mode=discover`}
+            <a href={`/explore?${bookParams}`}
               className="block card px-6 py-5 transition-all duration-150"
               style={{ textDecoration: 'none' }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 20px rgba(44,31,20,0.12)'; }}
