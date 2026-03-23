@@ -26,10 +26,23 @@ interface Props {
 
 function priceColor(price: number, min: number, max: number): string {
   const range = max - min || 1;
-  const t = (price - min) / range; // 0 = cheapest, 1 = most expensive
-  if (t < 0.33) return '#059669'; // green
-  if (t < 0.66) return '#F59E0B'; // amber
-  return '#DC2626';               // red
+  const t = Math.max(0, Math.min(1, (price - min) / range)); // 0 = cheapest, 1 = most expensive
+  // Green → lime → yellow → orange → red
+  const stops = [
+    { t: 0.00, r: 5,   g: 150, b: 105 }, // #059669 green
+    { t: 0.25, r: 101, g: 163, b: 13  }, // #65A30D lime
+    { t: 0.50, r: 234, g: 179, b: 8   }, // #EAB308 yellow
+    { t: 0.75, r: 249, g: 115, b: 22  }, // #F97316 orange
+    { t: 1.00, r: 220, g: 38,  b: 38  }, // #DC2626 red
+  ];
+  const lo = stops.findLast(s => s.t <= t) ?? stops[0];
+  const hi = stops.find(s => s.t > t) ?? stops[stops.length - 1];
+  const span = hi.t - lo.t || 1;
+  const f = (t - lo.t) / span;
+  const r = Math.round(lo.r + f * (hi.r - lo.r));
+  const g = Math.round(lo.g + f * (hi.g - lo.g));
+  const b = Math.round(lo.b + f * (hi.b - lo.b));
+  return `rgb(${r},${g},${b})`;
 }
 
 // Blue (cold) → cyan → green → yellow → orange → red (hot)
@@ -71,7 +84,11 @@ function FlyToSelected({ destinations, selected }: { destinations: FlightDestina
 export default function FlightMap({ destinations, selected, onSelect, currency, colorBy = 'price' }: Props) {
   const prices = destinations.map(d => d.price);
   const minPrice = Math.min(...prices);
-  const maxPrice = Math.max(...prices);
+  // Cap the scale at the 90th percentile so outlier expensive flights don't
+  // compress everything else into the green band.
+  const sorted = [...prices].sort((a, b) => a - b);
+  const p90 = sorted[Math.floor(sorted.length * 0.9)] ?? sorted[sorted.length - 1];
+  const maxPrice = Math.max(p90, minPrice + 1);
 
   return (
     <MapContainer
