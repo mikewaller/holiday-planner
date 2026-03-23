@@ -118,7 +118,7 @@ export default function Home() {
               </span>
             </div>
           </h1>
-          <p className="mt-3 text-sm" style={{ color: 'var(--color-muted)', fontWeight: 400, whiteSpace: 'nowrap' }}>
+          <p className="mt-3 text-sm" style={{ color: 'var(--color-muted)', fontWeight: 400 }}>
             Find dates that work for everyone. Share a link. No sign-up, no fuss.
           </p>
         </div>

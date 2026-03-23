@@ -10,7 +10,7 @@ type Status = 'free' | 'cant_do' | 'preferred';
 
 interface Plan {
   id: string; name: string; window_start: string; window_end: string;
-  min_duration: number; max_duration: number; is_locked: number;
+  min_duration: number; max_duration: number; is_locked: number; message: string | null;
 }
 interface Participant { id: string; name: string; participant_token: string; }
 interface Availability { participant_id: string; date: string; status: Status; }
@@ -73,6 +73,12 @@ export default function PlanPage() {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('noAccountDismissed') === '1';
   });
+  const [activeStatus, setActiveStatus] = useState<Status | 'erase'>('free');
+  const [isPainting, setIsPainting] = useState(false);
+  const paintedInGesture = useRef(new Set<string>());
+  const [editingMessage, setEditingMessage] = useState(false);
+  const [messageInput, setMessageInput] = useState('');
+  const [savingMessage, setSavingMessage] = useState(false);
 
   const fetchPlan = useCallback(async () => {
     const res = await fetch(`/api/plans/${planId}`);
@@ -161,6 +167,12 @@ export default function PlanPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoJoinName, plan]);
 
+  useEffect(() => {
+    const stop = () => setIsPainting(false);
+    window.addEventListener('mouseup', stop);
+    return () => window.removeEventListener('mouseup', stop);
+  }, []);
+
   async function joinPlan() {
     if (!nameInput.trim()) return;
     setJoiningName(true); setNameError('');
@@ -197,21 +209,34 @@ export default function PlanPage() {
     fetchPlan();
   }
 
-  async function toggleDate(date: string) {
+  function paintDate(date: string, toggleOnSame = false) {
     if (!me || plan?.is_locked) return;
     const current = availability.find(a => a.participant_id === me.id && a.date === date);
-    const cycle: (Status | null)[] = ['free', 'preferred', 'cant_do', null];
-    const currentIndex = current ? cycle.indexOf(current.status) : 3;
-    const nextStatus = cycle[(currentIndex + 1) % cycle.length];
+    let newStatus: Status | null = activeStatus === 'erase' ? null : activeStatus;
+    if (toggleOnSame && activeStatus !== 'erase' && current?.status === activeStatus) newStatus = null;
+    if ((current?.status ?? null) === newStatus) return;
     setPoppingDate(date); setTimeout(() => setPoppingDate(null), 250);
     setAvailability(prev => {
       const filtered = prev.filter(a => !(a.participant_id === me.id && a.date === date));
-      return nextStatus ? [...filtered, { participant_id: me.id, date, status: nextStatus }] : filtered;
+      return newStatus ? [...filtered, { participant_id: me.id, date, status: newStatus }] : filtered;
     });
-    await fetch('/api/availability', {
+    fetch('/api/availability', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ participant_id: me.id, participant_token: me.token, plan_id: planId, date, status: nextStatus }),
+      body: JSON.stringify({ participant_id: me.id, participant_token: me.token, plan_id: planId, date, status: newStatus }),
     });
+  }
+
+  async function saveMessage() {
+    if (!resolvedCreatorToken) return;
+    setSavingMessage(true);
+    await fetch(`/api/plans/${planId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ creator_token: resolvedCreatorToken, message: messageInput }),
+    });
+    setEditingMessage(false);
+    await fetchPlan();
+    setSavingMessage(false);
   }
 
   async function toggleLock() {
@@ -229,8 +254,24 @@ export default function PlanPage() {
   }
 
   function copyShareLink() {
-    navigator.clipboard.writeText(`${window.location.origin}/plan/${planId}`);
+    const url = `${window.location.origin}/plan/${planId}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).catch(() => fallbackCopy(url));
+    } else {
+      fallbackCopy(url);
+    }
     setCopied(true); setTimeout(() => setCopied(false), 2000);
+  }
+
+  function fallbackCopy(text: string) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.position = 'fixed';
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
   }
 
   function openEditDates() {
@@ -420,37 +461,88 @@ export default function PlanPage() {
         </div>
 
         {/* ── Share link box ──────────────────────────────── */}
-        <div className="fade-up fade-up-2 card px-4 py-3 flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="label-tag mb-0.5" style={{ color: 'var(--color-faint)' }}>Share with your group</p>
-            <p className="text-sm font-medium truncate" style={{ color: 'var(--color-muted)' }}>
+        <div className="fade-up fade-up-2 rounded-2xl p-4" style={{ background: 'var(--color-coral-light)', border: '1.5px solid rgba(244,98,31,0.2)' }}>
+          <p className="font-display font-bold text-base mb-0.5" style={{ color: 'var(--color-coral)', letterSpacing: '-0.01em' }}>
+            Invite your group 🔗
+          </p>
+          <p className="text-xs mb-3" style={{ color: 'var(--color-muted)', lineHeight: 1.5 }}>
+            Send this link to everyone — they tap their available dates and you&apos;ll see the best windows instantly.
+          </p>
+          <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl" style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)' }}>
+            <p className="text-xs flex-1 truncate" style={{ color: 'var(--color-muted)', fontFamily: 'var(--font-nunito)', fontWeight: 500 }}>
               {typeof window !== 'undefined' ? `${window.location.origin}/plan/${planId}` : `/plan/${planId}`}
             </p>
           </div>
-          <button
-            onClick={copyShareLink}
-            className="label-tag px-3 py-2.5 rounded-xl transition-all duration-150 flex-shrink-0"
-            style={{
-              background: copied ? '#ECFDF5' : 'var(--color-coral)',
-              color: copied ? '#065F46' : '#fff',
-              boxShadow: copied ? 'none' : '0 2px 8px rgba(244,98,31,0.25)',
-            }}
-          >
-            {copied ? '✓ Copied!' : 'Copy link'}
-          </button>
-          <a
-            href={`https://wa.me/?text=${encodeURIComponent(`Join our trip planner! Mark your availability for ${plan.name}: ${typeof window !== 'undefined' ? `${window.location.origin}/plan/${planId}` : ''}`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="label-tag px-3 py-2.5 rounded-xl flex items-center gap-1.5 transition-all duration-150 flex-shrink-0"
-            style={{ background: '#25D366', color: '#fff', textDecoration: 'none' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '0.88'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '1'; }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            WhatsApp
-          </a>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={copyShareLink}
+              className="flex-1 py-2.5 rounded-xl font-display font-semibold text-sm transition-all duration-150"
+              style={{
+                background: copied ? 'var(--color-preferred-bg)' : 'var(--color-coral)',
+                color: copied ? 'var(--color-preferred)' : '#fff',
+                boxShadow: copied ? 'none' : '0 3px 10px rgba(244,98,31,0.3)',
+              }}
+            >
+              {copied ? '✓ Copied!' : 'Copy link'}
+            </button>
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`Join our trip planner! Mark your availability for ${plan.name}: ${typeof window !== 'undefined' ? `${window.location.origin}/plan/${planId}` : ''}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-2.5 rounded-xl font-display font-semibold text-sm flex items-center justify-center gap-1.5 transition-all duration-150"
+              style={{ background: '#25D366', color: '#fff', textDecoration: 'none' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '0.88'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '1'; }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              WhatsApp
+            </a>
+          </div>
         </div>
+
+        {/* ── Creator message ──────────────────────────────── */}
+        {(plan.message || resolvedCreatorToken) && (
+          <div className="fade-up fade-up-2 card px-5 py-4" style={{ borderLeft: '3px solid var(--color-coral)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-display font-bold" style={{ color: 'var(--color-ink)' }}>Message from the organiser</h3>
+              {resolvedCreatorToken && !editingMessage && (
+                <button onClick={() => { setMessageInput(plan.message ?? ''); setEditingMessage(true); }}
+                  className="label-tag transition-opacity hover:opacity-70" style={{ color: 'var(--color-faint)' }}>
+                  {plan.message ? 'Edit' : 'Add message'}
+                </button>
+              )}
+            </div>
+            {editingMessage ? (
+              <div className="space-y-2">
+                <textarea
+                  value={messageInput}
+                  onChange={e => setMessageInput(e.target.value)}
+                  placeholder="e.g. Aiming for the last week of July, everyone please mark by Friday!"
+                  rows={3}
+                  maxLength={500}
+                  className="field-input resize-none"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button onClick={saveMessage} disabled={savingMessage}
+                    className="flex-1 py-2 rounded-lg label-tag font-semibold transition-all duration-150 disabled:opacity-40"
+                    style={{ background: 'var(--color-coral)', color: '#fff' }}>
+                    {savingMessage ? 'Saving…' : 'Save'}
+                  </button>
+                  <button onClick={() => setEditingMessage(false)}
+                    className="flex-1 py-2 rounded-lg label-tag transition-all duration-150"
+                    style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)' }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : plan.message ? (
+              <p className="text-sm" style={{ color: 'var(--color-muted)', lineHeight: 1.6 }}>{plan.message}</p>
+            ) : (
+              <p className="text-sm" style={{ color: 'var(--color-faint)', fontStyle: 'italic' }}>No message yet. Add one to let your group know what you&apos;re thinking.</p>
+            )}
+          </div>
+        )}
 
         {/* ── Sign-up info (unauthenticated creators only) ─── */}
         {!authed && resolvedCreatorToken && !noAccountDismissed && (
@@ -561,21 +653,43 @@ export default function PlanPage() {
               )}
             </div>
             {me && !plan.is_locked && dateMode === 'recommend' && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                <span className="label-tag" style={{ color: 'var(--color-faint)' }}>Tap a date:</span>
-                {(Object.entries(STATUS_CONFIG) as [Status, typeof STATUS_CONFIG[Status]][]).map(([, cfg]) => (
-                  <span key={cfg.label} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full label-tag" style={{ background: cfg.tagBg, color: cfg.tagText }}>
-                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: cfg.dot }} />
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                <span className="label-tag" style={{ color: 'var(--color-faint)' }}>Paint:</span>
+                {(Object.entries(STATUS_CONFIG) as [Status, typeof STATUS_CONFIG[Status]][]).map(([status, cfg]) => (
+                  <button key={status} type="button" onClick={() => setActiveStatus(status as Status)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full label-tag transition-all duration-150"
+                    style={{
+                      background: activeStatus === status ? cfg.cellBg : cfg.tagBg,
+                      color: activeStatus === status ? '#fff' : cfg.tagText,
+                      border: `1.5px solid ${activeStatus === status ? cfg.cellBg : 'transparent'}`,
+                      boxShadow: activeStatus === status ? `0 2px 8px ${cfg.dot}55` : 'none',
+                    }}>
+                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: activeStatus === status ? '#fff' : cfg.dot }} />
                     {cfg.label}
-                  </span>
+                  </button>
                 ))}
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full label-tag" style={{ background: 'var(--color-bg)', color: 'var(--color-faint)', border: '1px solid var(--color-border)' }}>
-                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: 'var(--color-border-mid)' }} />
-                  No answer
-                </span>
+                <button type="button" onClick={() => setActiveStatus('erase')}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full label-tag transition-all duration-150"
+                  style={{
+                    background: activeStatus === 'erase' ? 'var(--color-border-mid)' : 'var(--color-bg)',
+                    color: activeStatus === 'erase' ? 'var(--color-ink)' : 'var(--color-faint)',
+                    border: `1.5px solid ${activeStatus === 'erase' ? 'var(--color-border-mid)' : 'var(--color-border)'}`,
+                  }}>
+                  ✕ Erase
+                </button>
               </div>
             )}
           </div>
+
+          {dateMode === 'recommend' && me && !plan.is_locked && !availability.some(a => a.participant_id === me.id) && (
+            <div className="mx-4 mt-3 mb-1 px-3 py-2.5 rounded-xl flex items-center gap-2.5"
+              style={{ background: 'var(--color-coral-light)', border: '1.5px solid rgba(244,98,31,0.18)' }}>
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>👆</span>
+              <p className="text-xs font-semibold" style={{ color: 'var(--color-coral)', lineHeight: 1.4 }}>
+                Pick a status above — then tap a date, or hold and drag to mark several at once
+              </p>
+            </div>
+          )}
 
           {dateMode === 'choose' && (
             <div className="mx-4 mt-3 mb-1 px-3 py-2.5 rounded-xl flex items-center gap-2.5"
@@ -602,7 +716,9 @@ export default function PlanPage() {
                     <div key={i} className="text-center label-tag py-1" style={{ color: 'var(--color-faint)', fontSize: '0.62rem' }}>{d}</div>
                   ))}
                 </div>
-                <div className="grid grid-cols-7 gap-1.5">
+                <div className="grid grid-cols-7 gap-1.5"
+                  style={{ touchAction: dateMode === 'recommend' && !!me && !plan.is_locked ? 'none' : 'auto' }}
+                  onMouseLeave={() => setIsPainting(false)}>
                   {Array.from({ length: (new Date(month.dates[0]).getDay() + 6) % 7 }).map((_, i) => <div key={`e-${i}`} />)}
                   {month.dates.map(date => {
                     const myStatus = myAvailability(date);
@@ -635,30 +751,31 @@ export default function PlanPage() {
                     return (
                       <div
                         key={date}
+                        data-date={date}
                         onClick={() => {
-                          if (dateMode === 'choose') {
-                            if (!rangeStart || rangeEnd) {
-                              setRangeStart(date);
-                              setRangeEnd(null);
-                            } else if (date <= rangeStart) {
-                              setRangeStart(date);
-                              setRangeEnd(null);
-                            } else {
-                              setRangeEnd(date);
-                            }
-                            return;
-                          }
-                          if (!me && !plan.is_locked) {
-                            setShowNamePrompt(true);
-                            setTimeout(() => setShowNamePrompt(false), 3000);
-                          } else if (isClickable) {
-                            toggleDate(date);
+                          if (dateMode !== 'choose') return;
+                          if (!rangeStart || rangeEnd) {
+                            setRangeStart(date); setRangeEnd(null);
+                          } else if (date <= rangeStart) {
+                            setRangeStart(date); setRangeEnd(null);
+                          } else {
+                            setRangeEnd(date);
                           }
                         }}
+                        onMouseDown={e => {
+                          if (dateMode !== 'recommend') return;
+                          if (!me && !plan.is_locked) { setShowNamePrompt(true); setTimeout(() => setShowNamePrompt(false), 3000); return; }
+                          if (!isClickable) return;
+                          e.preventDefault();
+                          setIsPainting(true);
+                          paintedInGesture.current = new Set([date]);
+                          paintDate(date, true);
+                        }}
                         onMouseEnter={e => {
-                          if (dateMode === 'choose') {
-                            if (rangeStart && !rangeEnd) setRangeHover(date);
-                            return;
+                          if (dateMode === 'choose') { if (rangeStart && !rangeEnd) setRangeHover(date); return; }
+                          if (isPainting && isClickable && !paintedInGesture.current.has(date)) {
+                            paintedInGesture.current.add(date);
+                            paintDate(date, false);
                           }
                           setHoveredDate(date);
                           const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
@@ -668,6 +785,23 @@ export default function PlanPage() {
                           if (dateMode === 'choose') { setRangeHover(null); return; }
                           setHoveredDate(null); setTooltipPos(null);
                         }}
+                        onTouchStart={() => {
+                          if (dateMode !== 'recommend' || !isClickable) return;
+                          setIsPainting(true);
+                          paintedInGesture.current = new Set([date]);
+                          paintDate(date, true);
+                        }}
+                        onTouchMove={e => {
+                          if (!isPainting) return;
+                          const touch = e.touches[0];
+                          const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                          const d = el?.closest('[data-date]')?.getAttribute('data-date');
+                          if (d && !paintedInGesture.current.has(d)) {
+                            paintedInGesture.current.add(d);
+                            paintDate(d, false);
+                          }
+                        }}
+                        onTouchEnd={() => setIsPainting(false)}
                         className={`relative aspect-square flex flex-col items-center justify-center text-xs font-semibold transition-all duration-150 ${isPopping ? 'cell-pop' : ''} cursor-pointer`}
                         style={rangeStyle ?? {
                           background: cfg ? cfg.cellBg : 'var(--color-bg)',

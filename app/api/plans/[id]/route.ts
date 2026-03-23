@@ -14,6 +14,7 @@ interface PlanRow {
   created_at: string;
   user_id: string | null;
   last_activity_at: string | null;
+  message: string | null;
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -86,6 +87,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           max_duration = ${body.max_duration}
       WHERE id = ${id}
     `;
+  }
+
+  if ('message' in body) {
+    const msg = typeof body.message === 'string' ? body.message.trim().slice(0, 500) : null;
+    await sql`UPDATE plans SET message = ${msg || null} WHERE id = ${id}`;
   }
 
   return NextResponse.json({ success: true });
