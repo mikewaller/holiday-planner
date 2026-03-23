@@ -69,6 +69,10 @@ export default function PlanPage() {
   const [rangeStart, setRangeStart] = useState<string | null>(null);
   const [rangeEnd, setRangeEnd] = useState<string | null>(null);
   const [rangeHover, setRangeHover] = useState<string | null>(null);
+  const [noAccountDismissed, setNoAccountDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('noAccountDismissed') === '1';
+  });
 
   const fetchPlan = useCallback(async () => {
     const res = await fetch(`/api/plans/${planId}`);
@@ -449,14 +453,20 @@ export default function PlanPage() {
         </div>
 
         {/* ── Sign-up info (unauthenticated creators only) ─── */}
-        {!authed && resolvedCreatorToken && (
+        {!authed && resolvedCreatorToken && !noAccountDismissed && (
           <div className="fade-up fade-up-2 px-4 py-3 rounded-xl flex items-start gap-3" style={{ background: 'var(--color-coral-light)', border: '1px solid rgba(244,98,31,0.15)' }}>
             <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: '0.05rem' }}>💡</span>
-            <p className="text-sm" style={{ color: 'var(--color-muted)', lineHeight: 1.5 }}>
+            <p className="text-sm flex-1" style={{ color: 'var(--color-muted)', lineHeight: 1.5 }}>
               No account needed — anyone with this link can join and mark their availability.{' '}
               <a href="/login" style={{ color: 'var(--color-coral)', textDecoration: 'none', fontWeight: 600 }}>Sign in</a>
-              {' '}to keep all your created trips in one place. This plan will always be accessible at this URL.
+              {' '}to keep all your created trips in one place.
             </p>
+            <button
+              onClick={() => { setNoAccountDismissed(true); localStorage.setItem('noAccountDismissed', '1'); }}
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold"
+              style={{ background: 'rgba(244,98,31,0.12)', color: 'var(--color-coral)' }}
+              aria-label="Dismiss"
+            >✕</button>
           </div>
         )}
 
@@ -474,8 +484,25 @@ export default function PlanPage() {
             {nameError && <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-cantdo)' }}>{nameError}</p>}
             {showNamePrompt && !nameError && <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-coral)' }}>Enter your name above to start marking your dates 👆</p>}
           </div>
-        ) : (
-          <div className="fade-up fade-up-2 px-4 py-3 card">
+        ) : null}
+
+        {/* ── Who's coming (merged with identity) ────────── */}
+        {(participants.length > 0 || me) && (
+          <div className="fade-up fade-up-3 card px-5 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-display font-bold" style={{ color: 'var(--color-ink)' }}>
+                Who&apos;s coming? 🌍
+              </h3>
+              {me && !renamingMe && (
+                <button
+                  onClick={() => { setRenameInput(me.name); setRenamingMe(true); }}
+                  className="label-tag transition-opacity hover:opacity-70"
+                  style={{ color: 'var(--color-faint)' }}
+                >
+                  Change name
+                </button>
+              )}
+            </div>
             {renamingMe ? (
               <div className="space-y-2">
                 <p className="text-sm mb-2" style={{ color: 'var(--color-muted)' }}>Change your name:</p>
@@ -498,73 +525,54 @@ export default function PlanPage() {
                 {renameError && <p className="text-sm font-medium" style={{ color: 'var(--color-cantdo)' }}>{renameError}</p>}
               </div>
             ) : (
-              <div className="flex items-center justify-between">
-                <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-                  Marking as <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>{me.name}</span>
-                </p>
-                <button onClick={() => { setRenameInput(me.name); setRenamingMe(true); }} className="label-tag transition-opacity" style={{ color: 'var(--color-faint)' }}>
-                  Change
-                </button>
+              <div className="flex flex-wrap gap-2">
+                {participants.map(p => (
+                  <span key={p.id} className="text-sm px-3 py-1.5 rounded-full font-medium"
+                    style={{ background: me?.id === p.id ? 'var(--color-coral-light)' : 'var(--color-bg)', color: me?.id === p.id ? 'var(--color-coral)' : 'var(--color-muted)', border: `1.5px solid ${me?.id === p.id ? 'rgba(244,98,31,0.2)' : 'var(--color-border)'}` }}>
+                    {p.name}{me?.id === p.id && ' · you'}
+                  </span>
+                ))}
               </div>
             )}
           </div>
         )}
 
-        {/* ── Who's coming ─────────────────────────────────── */}
-        {participants.length > 0 && (
-          <div className="fade-up fade-up-3 card px-5 py-4">
-            <h3 className="font-display font-bold mb-3" style={{ color: 'var(--color-ink)' }}>
-              Who&apos;s coming? 🌍
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {participants.map(p => (
-                <span key={p.id} className="text-sm px-3 py-1.5 rounded-full font-medium"
-                  style={{ background: me?.id === p.id ? 'var(--color-coral-light)' : 'var(--color-bg)', color: me?.id === p.id ? 'var(--color-coral)' : 'var(--color-muted)', border: `1.5px solid ${me?.id === p.id ? 'rgba(244,98,31,0.2)' : 'var(--color-border)'}` }}>
-                  {p.name}{me?.id === p.id && ' · you'}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Legend ──────────────────────────────────────── */}
-        {me && !plan.is_locked && (
-          <div className="fade-up fade-up-3 card px-4 py-3">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="label-tag" style={{ color: 'var(--color-faint)' }}>Tap a date:</span>
-              {(Object.entries(STATUS_CONFIG) as [Status, typeof STATUS_CONFIG[Status]][]).map(([, cfg]) => (
-                <span key={cfg.label} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full label-tag" style={{ background: cfg.tagBg, color: cfg.tagText }}>
-                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: cfg.dot }} />
-                  {cfg.label}
-                </span>
-              ))}
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full label-tag" style={{ background: 'var(--color-bg)', color: 'var(--color-faint)', border: '1px solid var(--color-border)' }}>
-                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: 'var(--color-border-mid)' }} />
-                No answer
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* ── Calendar ────────────────────────────────────── */}
         <div className="fade-up fade-up-3 card" id="calendar">
-          <div className="flex items-center justify-between px-5 pt-4 pb-3" style={{ borderBottom: '1.5px solid var(--color-border)' }}>
-            <h2 className="font-display font-bold text-lg" style={{ color: 'var(--color-ink)' }}>
-              {months.length > 1 ? months[activeMonthIndex].label : 'Availability'}
-            </h2>
-            {months.length > 1 && (
-              <div className="flex items-center gap-1">
-                <button onClick={() => setActiveMonthIndex(i => Math.max(0, i - 1))} disabled={activeMonthIndex === 0}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-25"
-                  style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', fontSize: '1.1rem' }}
-                  aria-label="Previous month">‹</button>
-                <span className="label-tag px-2" style={{ color: 'var(--color-faint)', minWidth: '3.5rem', textAlign: 'center' }}>
-                  {activeMonthIndex + 1}/{months.length}
+          <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1.5px solid var(--color-border)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-display font-bold text-lg" style={{ color: 'var(--color-ink)' }}>
+                {months.length > 1 ? months[activeMonthIndex].label : 'Availability'}
+              </h2>
+              {months.length > 1 && (
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setActiveMonthIndex(i => Math.max(0, i - 1))} disabled={activeMonthIndex === 0}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-25"
+                    style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', fontSize: '1.1rem' }}
+                    aria-label="Previous month">‹</button>
+                  <span className="label-tag px-2" style={{ color: 'var(--color-faint)', minWidth: '3.5rem', textAlign: 'center' }}>
+                    {activeMonthIndex + 1}/{months.length}
+                  </span>
+                  <button onClick={() => setActiveMonthIndex(i => Math.min(months.length - 1, i + 1))} disabled={activeMonthIndex === months.length - 1}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-25"
+                    style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', fontSize: '1.1rem' }}
+                    aria-label="Next month">›</button>
+                </div>
+              )}
+            </div>
+            {me && !plan.is_locked && dateMode === 'recommend' && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <span className="label-tag" style={{ color: 'var(--color-faint)' }}>Tap a date:</span>
+                {(Object.entries(STATUS_CONFIG) as [Status, typeof STATUS_CONFIG[Status]][]).map(([, cfg]) => (
+                  <span key={cfg.label} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full label-tag" style={{ background: cfg.tagBg, color: cfg.tagText }}>
+                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: cfg.dot }} />
+                    {cfg.label}
+                  </span>
+                ))}
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full label-tag" style={{ background: 'var(--color-bg)', color: 'var(--color-faint)', border: '1px solid var(--color-border)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: 'var(--color-border-mid)' }} />
+                  No answer
                 </span>
-                <button onClick={() => setActiveMonthIndex(i => Math.min(months.length - 1, i + 1))} disabled={activeMonthIndex === months.length - 1}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-25"
-                  style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)', fontSize: '1.1rem' }}
-                  aria-label="Next month">›</button>
               </div>
             )}
           </div>
@@ -904,10 +912,8 @@ export default function PlanPage() {
                 const isConfirmed = !!rangeEnd;
                 const displayEnd = rangeEnd ?? (rangeHover && rangeHover > rangeStart ? rangeHover : null);
                 const nights = displayEnd ? differenceInDays(parseISO(displayEnd), parseISO(rangeStart)) : 0;
-                const tooShort = isConfirmed && plan && nights < plan.min_duration;
-                const tooLong = isConfirmed && plan && nights > plan.max_duration;
                 const isDayTrip = plan?.min_duration === 1 && plan?.max_duration === 1;
-                const valid = isConfirmed && !tooShort && !tooLong && nights >= 1;
+                const valid = isConfirmed && nights >= 1;
 
                 return (
                   <div className="px-5 py-4">
@@ -961,16 +967,6 @@ export default function PlanPage() {
                       </div>
                     )}
 
-                    {tooShort && (
-                      <p className="text-xs mb-3 font-medium" style={{ color: 'var(--color-cantdo)' }}>
-                        Too short — minimum is {plan?.min_duration} night{plan?.min_duration !== 1 ? 's' : ''} for this plan.
-                      </p>
-                    )}
-                    {tooLong && (
-                      <p className="text-xs mb-3 font-medium" style={{ color: 'var(--color-cantdo)' }}>
-                        Too long — maximum is {plan?.max_duration} night{plan?.max_duration !== 1 ? 's' : ''} for this plan.
-                      </p>
-                    )}
                     {valid && (
                       <a
                         href={`/plan/${planId}/book?start=${rangeStart}&nights=${nights}`}
