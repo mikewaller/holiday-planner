@@ -105,14 +105,14 @@ export default function Home() {
         <div className="fade-up fade-up-1 text-center mb-8">
           <h1
             className="font-display"
-            style={{ fontSize: '3rem', lineHeight: 1.1, fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}
+            style={{ fontSize: 'clamp(1.8rem, 11vw, 3rem)', lineHeight: 1.1, fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.02em' }}
           >
-            Let&apos;s hatch a<br />
-            <div style={{ overflow: 'hidden', padding: '0.1em 0.2em 0.2em 0.1em', margin: '-0.1em -0.2em -0.2em -0.1em', display: 'inline-block' }}>
+            Let&apos;s hatch a
+            <div style={{ overflow: 'hidden', paddingTop: '0.1em', paddingBottom: '0.2em' }}>
               <span
                 key={wordIndex}
                 className={`word-${wordPhase}`}
-                style={{ color: 'var(--color-coral)', display: 'inline-block', fontStyle: 'italic' }}
+                style={{ color: 'var(--color-coral)', display: 'inline-block', fontStyle: 'italic', whiteSpace: 'nowrap' }}
               >
                 {CYCLING_WORDS[wordIndex]}
               </span>

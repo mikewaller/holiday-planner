@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Nunito } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import FeedbackButton from "@/components/FeedbackButton";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -46,6 +47,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${fraunces.variable} ${nunito.variable} antialiased`}>
         {children}
+        <FeedbackButton />
         <Analytics />
       </body>
     </html>
