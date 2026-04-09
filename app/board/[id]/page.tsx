@@ -107,6 +107,7 @@ export default function BoardPage() {
   const creatorParam = searchParams.get('creator');
 
   const [board, setBoard] = useState<Board | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [me, setMe] = useState<Member | null>(null);
@@ -121,13 +122,22 @@ export default function BoardPage() {
   useEffect(() => { meRef.current = me; }, [me]);
 
   const fetchBoard = useCallback(async () => {
-    const res = await fetch(`/api/boards/${boardId}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    setBoard(data.board);
-    setMembers(data.members);
-    setWidgets(data.widgets);
-    if (data.creator_token) setCreatorToken(data.creator_token);
+    try {
+      const res = await fetch(`/api/boards/${boardId}`);
+      if (res.status === 404) { setLoadError('Board not found — it may have been deleted.'); return; }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setLoadError(`Failed to load board (${res.status}): ${err.error ?? 'unknown error'}`);
+        return;
+      }
+      const data = await res.json();
+      setBoard(data.board);
+      setMembers(data.members);
+      setWidgets(data.widgets);
+      if (data.creator_token) setCreatorToken(data.creator_token);
+    } catch (e) {
+      setLoadError(`Network error: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }, [boardId]);
 
   useEffect(() => { fetchBoard(); }, [fetchBoard]);
@@ -253,6 +263,16 @@ export default function BoardPage() {
     document.body.appendChild(el); el.select(); document.execCommand('copy');
     document.body.removeChild(el);
   }
+
+  if (loadError) return (
+    <main className="dot-bg min-h-screen flex items-center justify-center p-4">
+      <div className="card p-6 max-w-sm w-full text-center">
+        <p className="text-2xl mb-3">⚠️</p>
+        <p className="font-display font-bold text-lg mb-2" style={{ color: 'var(--color-ink)' }}>Something went wrong</p>
+        <p className="text-sm font-mono break-all" style={{ color: 'var(--color-cantdo)' }}>{loadError}</p>
+      </div>
+    </main>
+  );
 
   if (!board) return (
     <main className="dot-bg min-h-screen flex items-center justify-center">
