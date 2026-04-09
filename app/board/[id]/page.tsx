@@ -8,6 +8,7 @@ import WidgetNote from '@/components/board/WidgetNote';
 import WidgetLink from '@/components/board/WidgetLink';
 import WidgetCalendar from '@/components/board/WidgetCalendar';
 import WidgetItinerary from '@/components/board/WidgetItinerary';
+import WidgetDestinationMap from '@/components/board/WidgetDestinationMap';
 import { format, parseISO } from 'date-fns';
 import {
   DndContext,
@@ -38,6 +39,7 @@ const WIDGET_TYPES = [
   { type: 'link', label: '🔗 Link', description: 'Share a URL with preview' },
   { type: 'calendar', label: '📅 Availability', description: 'Mark dates and find the best windows' },
   { type: 'itinerary', label: '🗓️ Itinerary', description: 'Build a day-by-day plan with activities and links' },
+  { type: 'map', label: '🗺️ Destination Map', description: 'Pin and vote on places you want to visit' },
 ];
 
 function SortableWidget({ widget, me, creatorToken, boardId, members, onUpdate, onDelete }: {
@@ -115,6 +117,17 @@ function SortableWidget({ widget, me, creatorToken, boardId, members, onUpdate, 
               <WidgetCalendar
                 id={widget.id}
                 boardId={boardId}
+                data={widget.data}
+                me={me}
+                members={members}
+                canEdit={canEdit}
+                onUpdate={data => onUpdate(widget.id, data)}
+                onDelete={() => onDelete(widget.id)}
+              />
+            )}
+            {widget.type === 'map' && (
+              <WidgetDestinationMap
+                id={widget.id}
                 data={widget.data}
                 me={me}
                 members={members}
