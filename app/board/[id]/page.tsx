@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import Nav from '@/components/Nav';
 import WidgetNote from '@/components/board/WidgetNote';
 import WidgetLink from '@/components/board/WidgetLink';
+import WidgetCalendar from '@/components/board/WidgetCalendar';
 import { format, parseISO } from 'date-fns';
 import {
   DndContext,
@@ -34,12 +35,15 @@ interface Widget { id: string; type: string; data: Record<string, unknown>; posi
 const WIDGET_TYPES = [
   { type: 'note', label: '📝 Note', description: 'Write anything' },
   { type: 'link', label: '🔗 Link', description: 'Share a URL with preview' },
+  { type: 'calendar', label: '📅 Availability', description: 'Mark dates and find the best windows' },
 ];
 
-function SortableWidget({ widget, me, creatorToken, onUpdate, onDelete }: {
+function SortableWidget({ widget, me, creatorToken, boardId, members, onUpdate, onDelete }: {
   widget: Widget;
   me: Member | null;
   creatorToken: string | null;
+  boardId: string;
+  members: Member[];
   onUpdate: (id: string, data: Record<string, unknown>) => void;
   onDelete: (id: string) => void;
 }) {
@@ -88,6 +92,18 @@ function SortableWidget({ widget, me, creatorToken, onUpdate, onDelete }: {
               <WidgetLink
                 id={widget.id}
                 data={widget.data}
+                canEdit={canEdit}
+                onUpdate={data => onUpdate(widget.id, data)}
+                onDelete={() => onDelete(widget.id)}
+              />
+            )}
+            {widget.type === 'calendar' && (
+              <WidgetCalendar
+                id={widget.id}
+                boardId={boardId}
+                data={widget.data}
+                me={me}
+                members={members}
                 canEdit={canEdit}
                 onUpdate={data => onUpdate(widget.id, data)}
                 onDelete={() => onDelete(widget.id)}
@@ -196,7 +212,13 @@ export default function BoardPage() {
     const res = await fetch(`/api/boards/${boardId}/widgets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, data: {}, participant_token: me.participant_token }),
+      body: JSON.stringify({
+        type,
+        data: type === 'calendar'
+          ? { window_start: board?.window_start ?? null, window_end: board?.window_end ?? null, min_duration: 3, max_duration: 7 }
+          : {},
+        participant_token: me.participant_token,
+      }),
     });
     if (!res.ok) return;
     const { widget } = await res.json();
@@ -358,6 +380,8 @@ export default function BoardPage() {
                     widget={widget}
                     me={me}
                     creatorToken={creatorToken}
+                    boardId={boardId}
+                    members={members}
                     onUpdate={updateWidget}
                     onDelete={deleteWidget}
                   />
@@ -374,7 +398,7 @@ export default function BoardPage() {
           onClick={() => setShowWidgetPicker(true)}
           className="fixed flex items-center justify-center transition-all duration-200"
           style={{
-            bottom: '1.5rem', right: '1.5rem',
+            bottom: '1.5rem', left: '1.5rem',
             width: '3.25rem', height: '3.25rem',
             borderRadius: '50%',
             background: 'var(--color-coral)',
