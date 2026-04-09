@@ -181,11 +181,6 @@ export default function WidgetCalendar({ id, boardId, data, me, members, canEdit
           Save
         </button>
 
-        {canEdit && (
-          <button onClick={onDelete} className="w-full text-center label-tag transition-opacity hover:opacity-70" style={{ color: 'var(--color-cantdo)' }}>
-            Remove
-          </button>
-        )}
       </div>
     );
   }
@@ -437,19 +432,14 @@ export default function WidgetCalendar({ id, boardId, data, me, members, canEdit
       )}
 
       {/* Footer actions */}
-      <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: '1.5px solid var(--color-border)' }}>
-        {canEdit && (
+      {canEdit && (
+        <div className="mt-4 pt-3" style={{ borderTop: '1.5px solid var(--color-border)' }}>
           <button onClick={() => onUpdate({ ...data, window_start: undefined, window_end: undefined })}
             className="label-tag transition-opacity hover:opacity-70" style={{ color: 'var(--color-faint)' }}>
             Edit dates
           </button>
-        )}
-        {canEdit && (
-          <button onClick={onDelete} className="label-tag transition-opacity hover:opacity-70" style={{ color: 'var(--color-cantdo)' }}>
-            Remove
-          </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

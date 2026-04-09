@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import type { MapPin } from './MapInner';
 
 const MapInner = dynamic(() => import('./MapInner'), { ssr: false });
 
-// Colors indexed by member join order
 const MEMBER_COLORS = [
   '#F4621F', '#3B82F6', '#10B981', '#8B5CF6',
   '#F59E0B', '#EC4899', '#06B6D4', '#84CC16',
@@ -33,7 +33,7 @@ interface NominatimResult {
   lon: string;
 }
 
-export default function WidgetDestinationMap({ id, data, me, members, canEdit, onUpdate, onDelete }: Props) {
+export default function WidgetDestinationMap({ id, data, me, members, onUpdate }: Props) {
   const pins: MapPin[] = Array.isArray(data.pins) ? (data.pins as MapPin[]) : [];
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,7 +41,9 @@ export default function WidgetDestinationMap({ id, data, me, members, canEdit, o
   const [searching, setSearching] = useState(false);
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
   const [flyTo, setFlyTo] = useState<{ lat: number; lng: number } | null>(null);
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [reactionPickerPinId, setReactionPickerPinId] = useState<string | null>(null);
+  const [reactionPickerPos, setReactionPickerPos] = useState<{ top: number; left: number } | null>(null);
+  const reactionPickerRef = useRef<HTMLDivElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -49,6 +51,18 @@ export default function WidgetDestinationMap({ id, data, me, members, canEdit, o
   members.forEach((m, i) => { memberColors[m.id] = MEMBER_COLORS[i % MEMBER_COLORS.length]; });
 
   const selectedPin = pins.find(p => p.id === selectedPinId) ?? null;
+
+  // Close reaction picker on outside click
+  useEffect(() => {
+    if (!reactionPickerPinId) return;
+    function handler(e: MouseEvent) {
+      if (reactionPickerRef.current && !reactionPickerRef.current.contains(e.target as Node)) {
+        setReactionPickerPinId(null);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [reactionPickerPinId]);
 
   // Debounced Nominatim search
   const handleSearchChange = useCallback((q: string) => {
@@ -93,9 +107,16 @@ export default function WidgetDestinationMap({ id, data, me, members, canEdit, o
   }
 
   function removePin(pinId: string) {
-    const updatedPins = pins.filter(p => p.id !== pinId);
-    onUpdate({ ...data, pins: updatedPins });
+    onUpdate({ ...data, pins: pins.filter(p => p.id !== pinId) });
     setSelectedPinId(null);
+    setShowDeleteConfirm(false);
+  }
+
+  function openReactionPicker(pinId: string, e: React.MouseEvent<HTMLButtonElement>) {
+    if (reactionPickerPinId === pinId) { setReactionPickerPinId(null); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setReactionPickerPos({ top: rect.top, left: rect.left });
+    setReactionPickerPinId(pinId);
   }
 
   function toggleReaction(pinId: string, emoji: string) {
@@ -109,216 +130,195 @@ export default function WidgetDestinationMap({ id, data, me, members, canEdit, o
       return { ...p, reactions: [...p.reactions, { member_id: me.id, emoji }] };
     });
     onUpdate({ ...data, pins: updatedPins });
-    setShowReactionPicker(false);
+    setReactionPickerPinId(null);
   }
 
   function handleSelectPin(pinId: string) {
     setSelectedPinId(pinId === selectedPinId ? null : pinId);
+    setShowDeleteConfirm(false);
     const pin = pins.find(p => p.id === pinId);
     if (pin) setFlyTo({ lat: pin.lat, lng: pin.lng });
   }
 
-  // Close reaction picker on outside click
-  useEffect(() => {
-    if (!showReactionPicker) return;
-    const handler = () => setShowReactionPicker(false);
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showReactionPicker]);
-
-  const canDeletePin = selectedPin
-    ? !!(me && (me.id === selectedPin.added_by || canEdit))
-    : false;
+  const canDeletePin = selectedPin ? !!(me && me.id === selectedPin.added_by) : false;
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span style={{ fontSize: '1.1rem' }}>🗺️</span>
-          <span className="font-display font-bold text-sm" style={{ color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>
-            Destination Inspiration Map
-          </span>
-          {pins.length > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-              style={{ background: 'var(--color-coral-light)', color: 'var(--color-coral)' }}>
-              {pins.length}
-            </span>
-          )}
-        </div>
-        {canEdit && (
-          <button onClick={onDelete}
-            className="text-xs px-2.5 py-1 rounded-lg font-medium opacity-50 hover:opacity-100 transition-opacity"
-            style={{ color: 'var(--color-cantdo)', background: 'var(--color-bg)' }}>
-            Remove
-          </button>
-        )}
-      </div>
+    <>
+      <div>
+        {/* Search bar */}
+        {me && (
+          <div className="relative mb-3">
+            <div className="flex gap-2 relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => handleSearchChange(e.target.value)}
+                placeholder="Search for a destination…"
+                className="field-input flex-1"
+                style={{ fontSize: '0.8rem', padding: '0.5rem 0.75rem' }}
+              />
+              {searching && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ width: 14, height: 14, border: '2px solid var(--color-coral)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+              )}
+            </div>
 
-      {/* Search bar */}
-      {me && (
-        <div className="relative mb-3">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => handleSearchChange(e.target.value)}
-              placeholder="Search for a destination…"
-              className="field-input flex-1"
-              style={{ fontSize: '0.8rem', padding: '0.5rem 0.75rem' }}
-            />
-            {searching && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2"
-                style={{ width: 14, height: 14, border: '2px solid var(--color-coral)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+            {searchResults.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden"
+                style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', boxShadow: '0 8px 24px rgba(44,31,20,0.12)' }}>
+                {searchResults.map(r => (
+                  <button key={r.place_id}
+                    onClick={() => addPin(r)}
+                    className="w-full text-left px-3 py-2.5 text-xs hover:opacity-80 transition-opacity"
+                    style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-ink)', lineHeight: 1.4 }}>
+                    <span style={{ fontWeight: 600 }}>{r.display_name.split(',')[0]}</span>
+                    <span style={{ color: 'var(--color-muted)' }}>{r.display_name.split(',').slice(1, 3).join(',')}</span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
+        )}
 
-          {searchResults.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden"
-              style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', boxShadow: '0 8px 24px rgba(44,31,20,0.12)' }}>
-              {searchResults.map(r => (
-                <button key={r.place_id}
-                  onClick={() => addPin(r)}
-                  className="w-full text-left px-3 py-2.5 text-xs hover:opacity-80 transition-opacity"
-                  style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-ink)', lineHeight: 1.4 }}>
-                  <span style={{ fontWeight: 600 }}>{r.display_name.split(',')[0]}</span>
-                  <span style={{ color: 'var(--color-muted)' }}>{r.display_name.split(',').slice(1, 3).join(',')}</span>
+        {/* Map */}
+        <div style={{ height: 340, borderRadius: '0.875rem', overflow: 'hidden', border: '1.5px solid var(--color-border)' }}>
+          <MapInner
+            pins={pins}
+            selectedPinId={selectedPinId}
+            memberColors={memberColors}
+            flyTo={flyTo}
+            onSelect={handleSelectPin}
+          />
+        </div>
+
+        {/* Pin chips */}
+        {pins.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {pins.map(pin => {
+              const color = memberColors[pin.added_by] ?? '#F4621F';
+              const isSelected = selectedPinId === pin.id;
+              return (
+                <button key={pin.id}
+                  onClick={() => handleSelectPin(pin.id)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-150"
+                  style={{
+                    background: isSelected ? color : 'var(--color-bg)',
+                    color: isSelected ? '#fff' : 'var(--color-ink)',
+                    border: `1.5px solid ${isSelected ? color : 'var(--color-border)'}`,
+                  }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
+                  {pin.label.split(',')[0]}
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
 
-      {/* Map */}
-      <div style={{ height: 340, borderRadius: '0.875rem', overflow: 'hidden', border: '1.5px solid var(--color-border)' }}>
-        <MapInner
-          pins={pins}
-          selectedPinId={selectedPinId}
-          memberColors={memberColors}
-          flyTo={flyTo}
-          onSelect={handleSelectPin}
-        />
-      </div>
-
-      {/* Pin list (compact) */}
-      {pins.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {pins.map(pin => {
-            const color = memberColors[pin.added_by] ?? '#F4621F';
-            const isSelected = selectedPinId === pin.id;
-            return (
-              <button key={pin.id}
-                onClick={() => handleSelectPin(pin.id)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-150"
-                style={{
-                  background: isSelected ? color : 'var(--color-bg)',
-                  color: isSelected ? '#fff' : 'var(--color-ink)',
-                  border: `1.5px solid ${isSelected ? color : 'var(--color-border)'}`,
-                }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
-                {pin.label.split(',')[0]}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Selected pin detail panel */}
-      {selectedPin && (
-        <div className="mt-3 rounded-xl p-3"
-          style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)' }}>
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div>
-              <p className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>{selectedPin.label}</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
-                Added by <span style={{ color: memberColors[selectedPin.added_by] ?? 'var(--color-coral)', fontWeight: 600 }}>{selectedPin.added_by_name}</span>
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+        {/* Selected pin detail panel */}
+        {selectedPin && (
+          <div className="mt-3 rounded-xl p-3"
+            style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)' }}>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div>
+                <p className="font-semibold text-sm" style={{ color: 'var(--color-ink)' }}>{selectedPin.label}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
+                  Added by <span style={{ color: memberColors[selectedPin.added_by] ?? 'var(--color-coral)', fontWeight: 600 }}>{selectedPin.added_by_name}</span>
+                </p>
+              </div>
               {canDeletePin && (
-                <>
+                <div className="flex-shrink-0 flex gap-1">
                   {showDeleteConfirm ? (
-                    <div className="flex gap-1">
+                    <>
                       <button onClick={() => removePin(selectedPin.id)}
                         className="text-xs px-2 py-0.5 rounded-lg font-medium"
                         style={{ background: 'var(--color-cantdo)', color: '#fff' }}>Remove</button>
                       <button onClick={() => setShowDeleteConfirm(false)}
                         className="text-xs px-2 py-0.5 rounded-lg font-medium"
                         style={{ background: 'var(--color-border)', color: 'var(--color-muted)' }}>Cancel</button>
-                    </div>
+                    </>
                   ) : (
                     <button onClick={() => setShowDeleteConfirm(true)}
                       className="text-xs opacity-40 hover:opacity-80 transition-opacity"
                       style={{ color: 'var(--color-cantdo)' }}>✕</button>
                   )}
-                </>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Reactions row */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Grouped reaction counts */}
-            {(() => {
-              const grouped: Record<string, string[]> = {};
-              for (const r of selectedPin.reactions) {
-                if (!grouped[r.emoji]) grouped[r.emoji] = [];
-                grouped[r.emoji].push(r.member_id);
-              }
-              return Object.entries(grouped).map(([emoji, memberIds]) => {
-                const myReaction = me && memberIds.includes(me.id);
-                return (
-                  <button key={emoji}
-                    onClick={() => me && toggleReaction(selectedPin.id, emoji)}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-all duration-100"
-                    style={{
-                      background: myReaction ? 'var(--color-coral-light)' : 'var(--color-surface)',
-                      border: `1.5px solid ${myReaction ? 'rgba(244,98,31,0.25)' : 'var(--color-border)'}`,
-                      color: 'var(--color-ink)',
-                    }}>
-                    {emoji} <span style={{ color: 'var(--color-muted)' }}>{memberIds.length}</span>
-                  </button>
-                );
-              });
-            })()}
+            {/* Reactions row */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {(() => {
+                const grouped: Record<string, string[]> = {};
+                for (const r of selectedPin.reactions) {
+                  if (!grouped[r.emoji]) grouped[r.emoji] = [];
+                  grouped[r.emoji].push(r.member_id);
+                }
+                return Object.entries(grouped).map(([emoji, memberIds]) => {
+                  const myReaction = me && memberIds.includes(me.id);
+                  return (
+                    <button key={emoji}
+                      onClick={() => me && toggleReaction(selectedPin.id, emoji)}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-all duration-100"
+                      style={{
+                        background: myReaction ? 'var(--color-coral-light)' : 'var(--color-surface)',
+                        border: `1.5px solid ${myReaction ? 'rgba(244,98,31,0.25)' : 'var(--color-border)'}`,
+                        color: 'var(--color-ink)',
+                      }}>
+                      {emoji} <span style={{ color: 'var(--color-muted)' }}>{memberIds.length}</span>
+                    </button>
+                  );
+                });
+              })()}
 
-            {/* Add reaction */}
-            {me && (
-              <div className="relative">
+              {me && (
                 <button
-                  onClick={e => { e.stopPropagation(); setShowReactionPicker(p => !p); }}
+                  onClick={e => openReactionPicker(selectedPin.id, e)}
                   className="flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium transition-opacity hover:opacity-70"
                   style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)' }}>
                   + React
                 </button>
-                {showReactionPicker && (
-                  <div className="absolute bottom-full mb-1 left-0 z-50 flex gap-1 p-2 rounded-xl"
-                    style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', boxShadow: '0 8px 24px rgba(44,31,20,0.12)' }}
-                    onMouseDown={e => e.stopPropagation()}>
-                    {REACTION_EMOJIS.map(emoji => (
-                      <button key={emoji}
-                        onClick={() => toggleReaction(selectedPin.id, emoji)}
-                        className="text-base hover:scale-125 transition-transform duration-100"
-                        style={{ lineHeight: 1 }}>
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {pins.length === 0 && !me && (
-        <p className="mt-3 text-xs text-center" style={{ color: 'var(--color-muted)' }}>
-          Join the board to suggest destinations
-        </p>
-      )}
+        {pins.length === 0 && !me && (
+          <p className="mt-3 text-xs text-center" style={{ color: 'var(--color-muted)' }}>
+            Join the board to suggest destinations
+          </p>
+        )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+
+      {/* Reaction picker portal */}
+      {typeof window !== 'undefined' && reactionPickerPinId && reactionPickerPos && createPortal(
+        <div
+          ref={reactionPickerRef}
+          style={{
+            position: 'fixed',
+            top: reactionPickerPos.top,
+            left: reactionPickerPos.left,
+            transform: 'translateY(calc(-100% - 8px))',
+            zIndex: 9999,
+            background: 'var(--color-surface)',
+            border: '1.5px solid var(--color-border)',
+            boxShadow: '0 8px 32px rgba(44,31,20,0.18)',
+            borderRadius: '0.875rem',
+            padding: '0.5rem',
+            display: 'flex',
+            gap: '0.25rem',
+          }}
+        >
+          {REACTION_EMOJIS.map(emoji => (
+            <button key={emoji}
+              onClick={() => reactionPickerPinId && toggleReaction(reactionPickerPinId, emoji)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-base transition-all hover:scale-110"
+              style={{ background: 'var(--color-bg)' }}>{emoji}</button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
   );
 }

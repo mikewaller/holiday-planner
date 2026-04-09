@@ -61,11 +61,6 @@ export default function WidgetNote({ data, canEdit, onUpdate, onDelete }: Props)
                 style={{ color: 'var(--color-faint)' }}>
                 Edit
               </button>
-              <button onClick={onDelete}
-                className="label-tag transition-opacity hover:opacity-70"
-                style={{ color: 'var(--color-cantdo)' }}>
-                Delete
-              </button>
             </div>
           )}
         </div>

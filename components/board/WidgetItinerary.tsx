@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase/client';
 
 type CardType = 'activity' | 'link';
@@ -57,6 +58,8 @@ export default function WidgetItinerary({ id, boardId, data, me, members, canEdi
   const [cardInput, setCardInput] = useState('');
   const [fetchingOg, setFetchingOg] = useState(false);
   const [emojiPickerCardId, setEmojiPickerCardId] = useState<string | null>(null);
+  const [emojiPickerPos, setEmojiPickerPos] = useState<{ top: number; left: number } | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [editingCardContent, setEditingCardContent] = useState('');
 
@@ -86,6 +89,25 @@ export default function WidgetItinerary({ id, boardId, data, me, members, canEdi
     setExpandedDays(new Set((data.days as Day[] ?? []).map((d: Day) => d.id)));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    if (!emojiPickerCardId) return;
+    function handler(e: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setEmojiPickerCardId(null);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [emojiPickerCardId]);
+
+  function openEmojiPicker(cardId: string, e: React.MouseEvent<HTMLButtonElement>) {
+    if (emojiPickerCardId === cardId) { setEmojiPickerCardId(null); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setEmojiPickerPos({ top: rect.top, left: rect.left });
+    setEmojiPickerCardId(cardId);
+  }
 
   function persistDays(newDays: Day[]) {
     setDays(newDays);
@@ -217,6 +239,7 @@ export default function WidgetItinerary({ id, boardId, data, me, members, canEdi
   }
 
   return (
+    <>
     <div className="w-full space-y-2">
       {days.length === 0 && (
         <div className="py-4 text-center">
@@ -342,23 +365,10 @@ export default function WidgetItinerary({ id, boardId, data, me, members, canEdi
                             }}>{emoji} {count}</button>
                         ))}
 
-                        <div className="relative">
-                          <button
-                            onClick={() => setEmojiPickerCardId(emojiPickerCardId === card.id ? null : card.id)}
-                            className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-all hover:opacity-70"
-                            style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)' }}>+</button>
-
-                          {emojiPickerCardId === card.id && (
-                            <div className="absolute bottom-full left-0 mb-1.5 p-2 rounded-xl flex flex-wrap gap-1"
-                              style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', boxShadow: '0 4px 20px rgba(44,31,20,0.15)', zIndex: 100, width: '11rem' }}>
-                              {EMOJI_OPTIONS.map(emoji => (
-                                <button key={emoji} onClick={() => toggleReaction(card.id, emoji)}
-                                  className="w-8 h-8 flex items-center justify-center rounded-lg text-base transition-all hover:scale-110"
-                                  style={{ background: 'var(--color-bg)' }}>{emoji}</button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          onClick={e => openEmojiPicker(card.id, e)}
+                          className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-all hover:opacity-70"
+                          style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', color: 'var(--color-muted)' }}>+</button>
 
                         {canEdit && !isEditingCard && (
                           <div className="ml-auto flex gap-2">
@@ -435,13 +445,37 @@ export default function WidgetItinerary({ id, boardId, data, me, members, canEdi
         </button>
       )}
 
-      {/* Remove widget */}
-      {canEdit && (
-        <div className="flex justify-end pt-1">
-          <button onClick={onDelete} className="label-tag transition-opacity hover:opacity-70"
-            style={{ color: 'var(--color-cantdo)' }}>Remove widget</button>
-        </div>
-      )}
     </div>
+
+    {/* Emoji picker portal */}
+    {typeof window !== 'undefined' && emojiPickerCardId && emojiPickerPos && createPortal(
+      <div
+        ref={emojiPickerRef}
+        style={{
+          position: 'fixed',
+          top: emojiPickerPos.top,
+          left: emojiPickerPos.left,
+          transform: 'translateY(calc(-100% - 8px))',
+          zIndex: 9999,
+          background: 'var(--color-surface)',
+          border: '1.5px solid var(--color-border)',
+          boxShadow: '0 8px 32px rgba(44,31,20,0.18)',
+          borderRadius: '0.875rem',
+          padding: '0.5rem',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.25rem',
+          width: '11rem',
+        }}
+      >
+        {EMOJI_OPTIONS.map(emoji => (
+          <button key={emoji} onClick={() => toggleReaction(emojiPickerCardId, emoji)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-base transition-all hover:scale-110"
+            style={{ background: 'var(--color-bg)' }}>{emoji}</button>
+        ))}
+      </div>,
+      document.body
+    )}
+    </>
   );
 }

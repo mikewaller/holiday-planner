@@ -42,6 +42,14 @@ const WIDGET_TYPES = [
   { type: 'map', label: '🗺️ Destination Map', description: 'Pin and vote on places you want to visit' },
 ];
 
+const DEFAULT_WIDGET_TITLES: Record<string, string> = {
+  note: 'Note',
+  link: 'Link',
+  calendar: 'Availability',
+  itinerary: 'Itinerary',
+  map: 'Destination Map',
+};
+
 function SortableWidget({ widget, me, creatorToken, boardId, members, onUpdate, onDelete }: {
   widget: Widget;
   me: Member | null;
@@ -52,8 +60,28 @@ function SortableWidget({ widget, me, creatorToken, boardId, members, onUpdate, 
   onDelete: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: widget.id });
-
   const canEdit = !!(me && (me.participant_token === widget.created_by || creatorToken));
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+
+  const title = (widget.data.title as string | undefined) || DEFAULT_WIDGET_TITLES[widget.type] || 'Widget';
+  const minimised = !!(widget.data.minimised as boolean | undefined);
+
+  function startEditTitle() {
+    if (!me) return;
+    setTitleDraft(title);
+    setEditingTitle(true);
+  }
+
+  function saveTitle() {
+    const saved = titleDraft.trim() || DEFAULT_WIDGET_TITLES[widget.type] || 'Widget';
+    onUpdate(widget.id, { ...widget.data, title: saved });
+    setEditingTitle(false);
+  }
+
+  function toggleMinimise() {
+    onUpdate(widget.id, { ...widget.data, minimised: !minimised });
+  }
 
   return (
     <div
@@ -65,13 +93,17 @@ function SortableWidget({ widget, me, creatorToken, boardId, members, onUpdate, 
         zIndex: isDragging ? 50 : 'auto',
       }}
     >
-      <div className="card px-4 py-4" style={{ background: 'var(--color-surface)' }}>
-        <div className="flex items-start gap-3">
+      <div className="card" style={{ background: 'var(--color-surface)', padding: 0 }}>
+
+        {/* ── Shared header ──────────────────────────────── */}
+        <div className="flex items-center gap-2 px-4 py-3"
+          style={{ borderBottom: minimised ? 'none' : '1.5px solid var(--color-border)' }}>
+
           {/* Drag handle */}
           <button
             {...attributes}
             {...listeners}
-            className="flex-shrink-0 mt-0.5 touch-none cursor-grab active:cursor-grabbing"
+            className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing"
             style={{ color: 'var(--color-border-mid)', padding: '2px' }}
             aria-label="Drag to reorder"
           >
@@ -82,7 +114,62 @@ function SortableWidget({ widget, me, creatorToken, boardId, members, onUpdate, 
             </svg>
           </button>
 
-          <div className="flex-1 min-w-0">
+          {/* Editable title */}
+          {editingTitle ? (
+            <input
+              autoFocus
+              value={titleDraft}
+              onChange={e => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveTitle();
+                if (e.key === 'Escape') setEditingTitle(false);
+              }}
+              className="flex-1 min-w-0 text-sm font-semibold bg-transparent outline-none border-b"
+              style={{ color: 'var(--color-ink)', borderColor: 'var(--color-coral)' }}
+            />
+          ) : (
+            <span
+              className={`flex-1 min-w-0 text-sm font-semibold truncate transition-opacity ${me ? 'cursor-text hover:opacity-60' : ''}`}
+              style={{ color: 'var(--color-ink)' }}
+              onClick={startEditTitle}
+            >
+              {title}
+            </span>
+          )}
+
+          {/* Minimise toggle */}
+          <button
+            onClick={toggleMinimise}
+            className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md transition-opacity hover:opacity-60"
+            style={{
+              color: 'var(--color-muted)',
+              fontSize: '1.1rem',
+              lineHeight: 1,
+              transform: minimised ? 'rotate(-90deg)' : 'rotate(90deg)',
+              transition: 'transform 0.2s ease',
+            }}
+            aria-label={minimised ? 'Expand' : 'Minimise'}
+          >
+            ›
+          </button>
+
+          {/* Delete */}
+          {canEdit && !editingTitle && (
+            <button
+              onClick={() => onDelete(widget.id)}
+              className="flex-shrink-0 w-5 h-5 flex items-center justify-center text-xs rounded-full transition-opacity hover:opacity-70"
+              style={{ color: 'var(--color-cantdo)' }}
+              aria-label="Remove widget"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* ── Widget body ────────────────────────────────── */}
+        {!minimised && (
+          <div className="px-4 py-4">
             {widget.type === 'note' && (
               <WidgetNote
                 id={widget.id}
@@ -137,7 +224,7 @@ function SortableWidget({ widget, me, creatorToken, boardId, members, onUpdate, 
               />
             )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

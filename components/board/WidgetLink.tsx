@@ -106,15 +106,6 @@ export default function WidgetLink({ data, canEdit, onUpdate, onDelete }: Props)
           <span style={{ color: 'var(--color-coral)', fontSize: '1rem', flexShrink: 0 }}>›</span>
         </div>
       </a>
-      {canEdit && (
-        <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <button onClick={onDelete}
-            className="label-tag transition-opacity hover:opacity-70"
-            style={{ color: 'var(--color-cantdo)' }}>
-            Remove
-          </button>
-        </div>
-      )}
     </div>
   );
 }
