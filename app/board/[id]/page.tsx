@@ -7,6 +7,7 @@ import Nav from '@/components/Nav';
 import WidgetNote from '@/components/board/WidgetNote';
 import WidgetLink from '@/components/board/WidgetLink';
 import WidgetCalendar from '@/components/board/WidgetCalendar';
+import WidgetItinerary from '@/components/board/WidgetItinerary';
 import { format, parseISO } from 'date-fns';
 import {
   DndContext,
@@ -36,6 +37,7 @@ const WIDGET_TYPES = [
   { type: 'note', label: '📝 Note', description: 'Write anything' },
   { type: 'link', label: '🔗 Link', description: 'Share a URL with preview' },
   { type: 'calendar', label: '📅 Availability', description: 'Mark dates and find the best windows' },
+  { type: 'itinerary', label: '🗓️ Itinerary', description: 'Build a day-by-day plan with activities and links' },
 ];
 
 function SortableWidget({ widget, me, creatorToken, boardId, members, onUpdate, onDelete }: {
@@ -92,6 +94,18 @@ function SortableWidget({ widget, me, creatorToken, boardId, members, onUpdate, 
               <WidgetLink
                 id={widget.id}
                 data={widget.data}
+                canEdit={canEdit}
+                onUpdate={data => onUpdate(widget.id, data)}
+                onDelete={() => onDelete(widget.id)}
+              />
+            )}
+            {widget.type === 'itinerary' && (
+              <WidgetItinerary
+                id={widget.id}
+                boardId={boardId}
+                data={widget.data}
+                me={me}
+                members={members}
                 canEdit={canEdit}
                 onUpdate={data => onUpdate(widget.id, data)}
                 onDelete={() => onDelete(widget.id)}
