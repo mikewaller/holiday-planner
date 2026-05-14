@@ -8,8 +8,10 @@ interface PlanRow { id: string; is_locked: number; }
 interface ParticipantRow { id: string; name: string; participant_token: string; user_id: string | null; }
 
 export async function POST(req: NextRequest) {
-  const { success } = await availabilityLimiter.limit(getIP(req));
-  if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+  try {
+    const { success } = await availabilityLimiter.limit(getIP(req));
+    if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+  } catch { /* fail open */ }
 
   const { plan_id, name, participant_token } = await req.json();
 
@@ -52,8 +54,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { success } = await availabilityLimiter.limit(getIP(req));
-  if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+  try {
+    const { success } = await availabilityLimiter.limit(getIP(req));
+    if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+  } catch { /* fail open */ }
 
   const { participant_id, participant_token, plan_id, name } = await req.json();
 
@@ -77,8 +81,10 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const { success } = await availabilityLimiter.limit(getIP(req));
-  if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+  try {
+    const { success } = await availabilityLimiter.limit(getIP(req));
+    if (!success) return NextResponse.json({ error: 'Too many requests — please wait a moment.' }, { status: 429 });
+  } catch { /* fail open */ }
 
   const { participant_id, participant_token, plan_id, date, status } = await req.json();
 
